@@ -84,6 +84,15 @@
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <filters>
+                                <!-- Keep the arcadedb-log.properties shipped by the record module, drop the engine copy
+                                     whose FileHandler writes ./log/arcadedb.log into the working directory. See:
+                                     the ArcadeDB notes in project-journals. -->
+                                <filter>
+                                    <artifact>com.arcadedb:arcadedb-engine</artifact>
+                                    <excludes>
+                                        <exclude>arcadedb-log.properties</exclude>
+                                    </excludes>
+                                </filter>
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
