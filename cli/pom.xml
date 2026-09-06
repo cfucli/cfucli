@@ -2,25 +2,25 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.littlejlib</groupId>
-        <artifactId>littlejlib-upstashcli</artifactId>
+        <groupId>io.github.cfucli</groupId>
+        <artifactId>cfucli</artifactId>
         <version>0.1</version>
     </parent>
 
-    <artifactId>littlejlib-upstashcli-cli</artifactId>
+    <artifactId>cfucli-cli</artifactId>
     <packaging>jar</packaging>
 
-    <description>upstashcli.exe - the agent's surface. A thin client over the node's loopback socket, so what claude-code sends lands in the same session the human is watching. Verbs read like ssh; everything that reports state also speaks --json.</description>
+    <description>cfucli.exe - the agent's surface. A thin client over the node's loopback socket, so what claude-code sends lands in the same session the human is watching. Verbs read like ssh; everything that reports state also speaks --json.</description>
 
     <properties>
-        <main.class>littlejlib.upstashcli.cli.UpstashCli</main.class>
+        <main.class>cfucli.cli.CfuCli</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>io.github.littlejlib</groupId>
-            <artifactId>littlejlib-upstashcli-node</artifactId>
+            <groupId>io.github.cfucli</groupId>
+            <artifactId>cfucli-node</artifactId>
         </dependency>
         <dependency>
             <groupId>info.picocli</groupId>
@@ -87,7 +87,7 @@
                             </filters>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>project-classifier</shadedClassifierName>
-                            <outputFile>shade/upstashcli.jar</outputFile>
+                            <outputFile>shade/cfucli.jar</outputFile>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${main.class}</mainClass>

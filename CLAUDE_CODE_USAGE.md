@@ -1,21 +1,21 @@
-# upstashcli, for an agent
+# cfucli, for an agent
 
-Read this once and you can drive a real shell that a human can watch, on this machine or on someone else's, and query everything that happened afterwards. `upstashcli guide` prints the same material as a manual in the terminal, and every verb answers `--help`.
+Read this once and you can drive a real shell that a human can watch, on this machine or on someone else's, and query everything that happened afterwards. `cfucli guide` prints the same material as a manual in the terminal, and every verb answers `--help`.
 
 ## Why you would use this instead of your own console
 
-Your built-in console floods the transcript, runs where the human cannot see it or type into it, cannot be given stdin, and is awkward to attach to from outside. A local upstashcli console is the opposite of all four: the shell runs in a visible window the person can take over at any moment, `exec` gives back an exact exit code with stdout and stderr apart, `--stdin` feeds it input, `screen` shows what is on the screen instead of every byte it has printed, and the whole session is recorded so you can go back over it with `grep`, `jobs` and `summary`.
+Your built-in console floods the transcript, runs where the human cannot see it or type into it, cannot be given stdin, and is awkward to attach to from outside. A local cfucli console is the opposite of all four: the shell runs in a visible window the person can take over at any moment, `exec` gives back an exact exit code with stdout and stderr apart, `--stdin` feeds it input, `screen` shows what is on the screen instead of every byte it has printed, and the whole session is recorded so you can go back over it with `grep`, `jobs` and `summary`.
 
 It costs nothing to run locally. Nothing goes near Upstash, no credentials are read, and a keystroke crosses in about a millisecond.
 
 ## The thirty-second version
 
 ```
-upstashcli console --node work            a shell in a window, on this machine only
-upstashcli exec    --node work "dir"      run it; its exit code becomes upstashcli's
-upstashcli screen  --node work            what is on the screen right now
-upstashcli tail    --node work -n 40 -f   what it printed, and what it prints next
-upstashcli node stop --node work          done
+cfucli console --node work            a shell in a window, on this machine only
+cfucli exec    --node work "dir"      run it; its exit code becomes cfucli's
+cfucli screen  --node work            what is on the screen right now
+cfucli tail    --node work -n 40 -f   what it printed, and what it prints next
+cfucli node stop --node work          done
 ```
 
 `--node` names which console you are talking to, so you can keep several apart. Everything that reports state takes `--json`.
@@ -26,13 +26,13 @@ upstashcli node stop --node work          done
 
 **The window is the node.** A node started headless has no window and cannot grow one later — `screen` will tell you so rather than pretend. If the human should be able to watch, start it with `console`, not `node start`.
 
-**Anything longer than one line goes through `run-script`, not `exec`.** A command reaches the far shell as a *string*, so every layer between you and it gets a turn at the quotes — your shell, this cli, then the interpreter at the other end. A PowerShell one-liner with nested quotes is the most reliable way to lose an hour here, and the failure is rarely a clean error: it is a mangled command that runs and does something almost right. Write the script to a local file and hand over the file. `upstashcli run-script build.ps1 arg "arg with space"` does put, exec and delete; the job shows up in `jobs` exactly as an `exec` would, and the script exit code is the command exit code. `--keep` leaves the file there, `--shell` overrides the interpreter, and when the session is on this machine nothing is staged at all because there is nowhere to send it.
+**Anything longer than one line goes through `run-script`, not `exec`.** A command reaches the far shell as a *string*, so every layer between you and it gets a turn at the quotes — your shell, this cli, then the interpreter at the other end. A PowerShell one-liner with nested quotes is the most reliable way to lose an hour here, and the failure is rarely a clean error: it is a mangled command that runs and does something almost right. Write the script to a local file and hand over the file. `cfucli run-script build.ps1 arg "arg with space"` does put, exec and delete; the job shows up in `jobs` exactly as an `exec` would, and the script exit code is the command exit code. `--keep` leaves the file there, `--shell` overrides the interpreter, and when the session is on this machine nothing is staged at all because there is nowhere to send it.
 
 **`exec` is not the shared shell.** It runs its own process beside the shell, which is the only way an exit code and separated streams can be exact — a shell sitting in a pager or at a password prompt can give you neither. What it ran is announced in the activity log so the human still sees it. When you actually want to drive the shell itself — change directory, answer a prompt — that is `send-keys`.
 
 **Killing something is `cancel`, not Ctrl-C.** `send-keys --ctrl c` does deliver the control character, and at a prompt cmd.exe cancels the line, but whether a program already running is interrupted depends on its console mode — measured here, it did not stop a running `ping`. Anything you may need to kill should be started with `exec --detach`, so `cancel <jobId>` can take it and its children down.
 
-**The terminal carries the shell and nothing else.** What the tool did — a command you ran, a viewer arriving, a refusal — goes to a separate activity channel: `F12` opens it as a pane under the terminal in the window, and it is the `control` stream in the recording. So `tail` gives you the program's output rather than the program's output with a log spliced through it, and nothing upstashcli says can land in the middle of what the shell was drawing. `tail --streams all` asks for the tool's lines as well.
+**The terminal carries the shell and nothing else.** What the tool did — a command you ran, a viewer arriving, a refusal — goes to a separate activity channel: `F12` opens it as a pane under the terminal in the window, and it is the `control` stream in the recording. So `tail` gives you the program's output rather than the program's output with a log spliced through it, and nothing cfucli says can land in the middle of what the shell was drawing. `tail --streams all` asks for the tool's lines as well.
 
 **If a human is going to watch you work, tell them to press `F12` before you start.** This is on you, not on them. The terminal pane carries the shell; the commands driving it are on the activity pane, which is shut by default. The legend counts what is waiting and names the key, but a person watching output scroll past has been handed the consequences of your commands and not the commands, and they will not know to look. One sentence at the start of the session — "press F12 to see what I am running" — is the whole fix. Where being seen matters more than an exact exit code, drive the shell with `send-keys` instead and it appears in the terminal as if typed.
 
@@ -40,7 +40,7 @@ upstashcli node stop --node work          done
 
 ## Exit codes
 
-`exec` and `wait` return the command's own exit code, unchanged — so `upstashcli exec ...` behaves in a script exactly as the command would locally. Otherwise: `0` did what was asked, `4` the far end or the node refused it (reason on stderr), `5` nothing to talk to — no node running, or no screen to show, `70` something else went wrong or an exit code could not be determined.
+`exec` and `wait` return the command's own exit code, unchanged — so `cfucli exec ...` behaves in a script exactly as the command would locally. Otherwise: `0` did what was asked, `4` the far end or the node refused it (reason on stderr), `5` nothing to talk to — no node running, or no screen to show, `70` something else went wrong or an exit code could not be determined.
 
 ## Habits worth having
 
@@ -56,7 +56,7 @@ Pass `--stdin "text"` or `--stdin-file F` (`-` reads your own stdin) when a comm
 
 ## Driving a machine that is not this one
 
-The far end runs the window app and reads out a nine-digit id and a one-time password. Then `upstashcli join <id> -p <password> --node far`, and everything above works the same. If that id turns out to be a session hosted on this machine, the relay is skipped automatically and the loopback is used instead — `status` says which transport a session actually got.
+The far end runs the window app and reads out a nine-digit id and a one-time password. Then `cfucli join <id> -p <password> --node far`, and everything above works the same. If that id turns out to be a session hosted on this machine, the relay is skipped automatically and the loopback is used instead — `status` says which transport a session actually got.
 
 **A joined session is not yet an admitted one.** If the far end is running the window, a human there has to approve the connection; until they do, `status` shows the session but the host has not attached. `put` and `get` say so within three seconds rather than blocking; `exec`'s answer is its timeout.
 
@@ -69,9 +69,9 @@ The host can lock you out (`lock`) or make you read-only (`view-only`) at any mo
 `put` and `get` are the joining end's verbs, and they choose their route by size rather than making you choose:
 
 ```
-upstashcli put ccls.toml C:\Users\op\xyz-jphil\ccapis\ --node far     relay: small, encrypted chunks
-upstashcli put ccls.jar  --node far                                   over the threshold - see below
-upstashcli get C:\Users\op\log.txt . --node far                       a directory destination is fine
+cfucli put config.toml C:\Users\sam\project\ --node far           relay: small, encrypted chunks
+cfucli put ccls.jar  --node far                                   over the threshold - see below
+cfucli get C:\Users\sam\log.txt . --node far                      a directory destination is fine
 ```
 
 - **Two ends on one machine** — nothing is transferred; the far end copies the file. Instant, no size limit.
@@ -83,7 +83,7 @@ Every transfer is checksummed, nothing is overwritten without `--force`, and the
 
 ## Where things are
 
-Settings, including credentials and `appJar`, are in `~/littlejlib/upstashcli/settings.toml`. Recordings are one store per node under `~/littlejlib/upstashcli/db/`. Node ports, local session endpoints and node logs are in `~/littlejlib/upstashcli/run/` — that last directory is the first place to look when something started but did not come up.
+Settings, including credentials and `appJar`, are in `~/cfucli/settings.toml`. Recordings are one store per node under `~/cfucli/db/`. Node ports, local session endpoints and node logs are in `~/cfucli/run/` — that last directory is the first place to look when something started but did not come up.
 
 **A Windows path in that file goes in single quotes** — `largeFileExchangeDir = 'C:\some\folder'`. In double quotes TOML reads every backslash as an escape, the file fails to parse, and every node on the machine then refuses to start.
 

@@ -2,20 +2,20 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.littlejlib</groupId>
-        <artifactId>littlejlib-upstashcli</artifactId>
+        <groupId>io.github.cfucli</groupId>
+        <artifactId>cfucli</artifactId>
         <version>0.1</version>
     </parent>
 
-    <artifactId>littlejlib-upstashcli-record</artifactId>
+    <artifactId>cfucli-record</artifactId>
     <packaging>jar</packaging>
 
     <description>Session recorder and query engine. Every frame that crosses the relay is written to a local ArcadeDB so both a human and an agent can go back over a session - grep it, slice it by stream, jump to a command, or read the high-level index of what ran and what it cost.</description>
 
     <dependencies>
         <dependency>
-            <groupId>io.github.littlejlib</groupId>
-            <artifactId>littlejlib-upstashcli-relay</artifactId>
+            <groupId>io.github.cfucli</groupId>
+            <artifactId>cfucli-relay</artifactId>
         </dependency>
         <dependency>
             <groupId>io.github.xyz-jphil</groupId>

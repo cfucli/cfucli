@@ -2,24 +2,24 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.littlejlib</groupId>
-        <artifactId>littlejlib-upstashcli</artifactId>
+        <groupId>io.github.cfucli</groupId>
+        <artifactId>cfucli</artifactId>
         <version>0.1</version>
     </parent>
 
-    <artifactId>littlejlib-upstashcli-node</artifactId>
+    <artifactId>cfucli-node</artifactId>
     <packaging>jar</packaging>
 
     <description>The resident half. Holds the one relay connection, the PTY when acting as host, the recorder, and a loopback socket the cli talks to. Headless - the JavaFX app sits on top of this, and so does the cli, so both see one consistent session.</description>
 
     <dependencies>
         <dependency>
-            <groupId>io.github.littlejlib</groupId>
-            <artifactId>littlejlib-upstashcli-relay</artifactId>
+            <groupId>io.github.cfucli</groupId>
+            <artifactId>cfucli-relay</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.littlejlib</groupId>
-            <artifactId>littlejlib-upstashcli-record</artifactId>
+            <groupId>io.github.cfucli</groupId>
+            <artifactId>cfucli-record</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.pty4j</groupId>

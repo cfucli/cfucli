@@ -1,12 +1,12 @@
-# upstashcli settings.
+# cfucli settings.
 #
-# This file is copied to %USERPROFILE%\littlejlib\upstashcli\ the first time the app runs, and is
+# This file is copied to %USERPROFILE%\cfucli\ the first time the app runs, and is
 # read and written THERE afterwards - editing this copy again later changes nothing.
 #
 # It ships with the three credential lines EMPTY on purpose. With them empty, everything on this
 # machine works and nothing is announced anywhere off it. To be reachable from somewhere else, open
 # the app and press F5 (Relay setup), paste the lines you were sent, and press Save. If you would
-# rather do it from a terminal:  upstashcli relay set --from thefile.txt
+# rather do it from a terminal:  cfucli relay set --from thefile.txt
 #
 # An empty value is treated as "not set", so leaving them as they are is a valid configuration and
 # not a half-finished one.

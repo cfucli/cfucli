@@ -2,12 +2,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.littlejlib</groupId>
-        <artifactId>littlejlib-upstashcli</artifactId>
+        <groupId>io.github.cfucli</groupId>
+        <artifactId>cfucli</artifactId>
         <version>0.1</version>
     </parent>
 
-    <artifactId>littlejlib-upstashcli-app</artifactId>
+    <artifactId>cfucli-app</artifactId>
     <packaging>jar</packaging>
 
     <description>The window. One exe, three roles chosen at startup - Host shares its shell, Viewer mirrors one and can type into it, Tray manages whatever is running on this machine. Carries the consent prompt, the live-session banner, the lock and the end button.</description>
@@ -15,14 +15,14 @@
     <properties>
         <!-- Not the Application subclass: JavaFX refuses to launch from a shaded jar when main
              lives on the Application itself. Main is the plain holder that calls launch. -->
-        <main.class>littlejlib.upstashcli.app.Main</main.class>
+        <main.class>cfucli.app.Main</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>io.github.littlejlib</groupId>
-            <artifactId>littlejlib-upstashcli-node</artifactId>
+            <groupId>io.github.cfucli</groupId>
+            <artifactId>cfucli-node</artifactId>
         </dependency>
         <dependency>
             <groupId>io.github.luvml</groupId>
@@ -109,7 +109,7 @@
                             </filters>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>project-classifier</shadedClassifierName>
-                            <outputFile>shade/upstashcli-app.jar</outputFile>
+                            <outputFile>shade/cfucli-app.jar</outputFile>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${main.class}</mainClass>

@@ -1,0 +1,21 @@
+# Java Runner Configuration (.jrc) for the cfucli WINDOW.
+#
+# Double-clicking cfucliapp.exe opens the launcher. This is the one to start.
+#
+# jr.exe rather than a .bat: launched from Explorer it behaves like javaw, so no console window
+# trails the window around, but run from a terminal it still prints.
+
+# --enable-native-access=ALL-UNNAMED is required, not merely tidy: JavaFX loads its natives through
+# System.load and pty4j reaches the Windows pseudo-console through JNA. Without it the JDK warns on
+# every call and will block them in a later release, which would take the terminal with it.
+vm.args=--enable-native-access=ALL-UNNAMED -Xlog:aot*=off
+
+# Relative to this folder, so the folder can be copied anywhere.
+java.args=-jar cfucli-app.jar
+
+# Off deliberately: the AOT cache is written next to the jar, and this folder may land somewhere the
+# user cannot write. It costs about a second on the one startup that happens.
+aot=false
+
+# Run the JVM in-process so this is its own named, killable process rather than java.exe.
+jvm=dll

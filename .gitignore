@@ -3,6 +3,7 @@ target/
 shade/
 dist/
 *.aot
+*.jar
 *.aot.config
 
 # Credentials. dist/ is where the seeded copy lives and is already ignored, but ignore this by

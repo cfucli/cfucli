@@ -10,7 +10,7 @@ A step-by-step guide for the person being asked to share their machine. Every sc
 
 ![The launcher](01-launcher.png)
 
-`upstashcliapp.exe` opens this. Two things to do from here: share this machine, or connect to one somebody else is sharing.
+`cfucliapp.exe` opens this. Two things to do from here: share this machine, or connect to one somebody else is sharing.
 
 The line above **node name** is the one worth reading first. Here it says *"Not connected to any relay - this machine is on its own."* That is what a fresh copy always says, and it is not a fault. Everything works on this machine in that state; nothing is announced anywhere, and nobody can reach it. Step 2 is how that changes.
 

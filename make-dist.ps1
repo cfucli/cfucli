@@ -1,4 +1,4 @@
-# Assemble the distributable: dist/upstashcli/ plus a zip of it.
+# Assemble the distributable: dist/cfucli/ plus a zip of it.
 #
 # Everything that is not a jar lives in pkg/ and is version-controlled. The two launchers are
 # copies of jr.exe under different names, taken at package time rather than committed, because a
@@ -19,16 +19,16 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
 $version = ([xml](Get-Content -LiteralPath (Join-Path $root 'pom.xml'))).project.version
-$name    = "upstashcli-$version-win-x64"
-$appJar  = Join-Path $root 'app\shade\upstashcli-app.jar'
-$cliJar  = Join-Path $root 'cli\shade\upstashcli.jar'
-$stage   = Join-Path $root 'dist\upstashcli'
+$name    = "cfucli-$version-win-x64"
+$appJar  = Join-Path $root 'app\shade\cfucli-app.jar'
+$cliJar  = Join-Path $root 'cli\shade\cfucli.jar'
+$stage   = Join-Path $root 'dist\cfucli'
 $zip     = Join-Path $root "dist\$name.zip"
 
 if ($Build) {
     # A node loads classes lazily, so replacing a jar under a running one leaves it able to run for
     # hours and then fail on a class it never happened to load. Stop them, then build.
-    & upstashcli node stop 2>&1 | Out-Null
+    & cfucli node stop 2>&1 | Out-Null
     & mvn -o -q -DskipTests install
     if ($LASTEXITCODE -ne 0) { throw "maven build failed ($LASTEXITCODE)" }
 }
@@ -43,10 +43,10 @@ $jrCandidates = @((Join-Path $root '..\jr\jr.exe')) + @((Get-Command jr.exe -Err
 $jrExe = $jrCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 if (-not $jrExe) { throw "no jr.exe found - clone https://github.com/littlejlib/jr next to this project" }
 
-Copy-Item $jrExe (Join-Path $stage 'upstashcliapp.exe')
-Copy-Item $jrExe (Join-Path $stage 'upstashcli.exe')
-Copy-Item (Join-Path $root 'pkg\upstashcliapp.jrc') $stage
-Copy-Item (Join-Path $root 'pkg\upstashcli.jrc') $stage
+Copy-Item $jrExe (Join-Path $stage 'cfucliapp.exe')
+Copy-Item $jrExe (Join-Path $stage 'cfucli.exe')
+Copy-Item (Join-Path $root 'pkg\cfucliapp.jrc') $stage
+Copy-Item (Join-Path $root 'pkg\cfucli.jrc') $stage
 Copy-Item (Join-Path $root 'pkg\README.txt') $stage
 Copy-Item (Join-Path $root 'pkg\install.cmd') $stage
 Copy-Item (Join-Path $root 'pkg\install.ps1') $stage

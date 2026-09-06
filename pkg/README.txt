@@ -1,4 +1,4 @@
-upstashcli - let someone you trust work on this machine's terminal
+cfucli - let someone you trust work on this machine's terminal
 ==================================================================
 
 WHAT THIS IS
@@ -29,9 +29,9 @@ INSTALL IT FIRST
 Double-click       install.cmd
 
 It takes a couple of seconds. It points the two programs at the files beside them and
-puts this folder on your PATH, so that "upstashcli" works as a command from anywhere.
+puts this folder on your PATH, so that "cfucli" works as a command from anywhere.
 It needs no administrator and changes nothing else on the machine. It also puts an
-upstashcli shortcut on your desktop.
+cfucli shortcut on your desktop.
 
 If you skip this step the window still works when double-clicked from this folder, but
 the command line will not work from anywhere else.
@@ -39,7 +39,7 @@ the command line will not work from anywhere else.
 
 START IT
 
-Double-click the upstashcli shortcut on your desktop, or upstashcliapp.exe in this
+Double-click the cfucli shortcut on your desktop, or cfucliapp.exe in this
 folder. A window opens and offers to share this machine.
 
 
@@ -100,21 +100,21 @@ WHAT IS RECORDED, AND WHERE
 
 Everything either side does is written to this machine, and it stays on this machine:
 
-    %USERPROFILE%\littlejlib\upstashcli\
+    %USERPROFILE%\cfucli\
 
 Nothing is uploaded anywhere. The relay carries only the encrypted traffic between the
 two ends while a session is live; it never holds a copy.
 
 To read a recording back, use the command line in this folder:
 
-    upstashcli sessions              every session recorded here
-    upstashcli jobs --session <id>   every command run in one, with its result
-    upstashcli job <jobId>           one command in full, with its output
+    cfucli sessions              every session recorded here
+    cfucli jobs --session <id>   every command run in one, with its result
+    cfucli job <jobId>           one command in full, with its output
 
 To delete recordings:
 
-    upstashcli forget --session <id>
-    upstashcli retain --days 7
+    cfucli forget --session <id>
+    cfucli retain --days 7
 
 
 IS IT SAFE
@@ -139,7 +139,7 @@ IF SOMETHING GOES WRONG
 
 The window starts but never offers a session id, or the other person cannot connect:
 
-    Look in  %USERPROFILE%\littlejlib\upstashcli\run\  - the files ending .log are
+    Look in  %USERPROFILE%\cfucli\run\  - the files ending .log are
     plain text and open in Notepad.
 
     Check the bottom line of the launcher. If it says this machine is on its own, the
@@ -154,8 +154,8 @@ The other person says the invite does not work:
 THE TWO PROGRAMS IN THIS FOLDER
 
     install.cmd          run this once, first.
-    upstashcliapp.exe    the window. This is the one to double-click.
-    upstashcli.exe       the command line. Not needed to share this machine; it is here
+    cfucliapp.exe    the window. This is the one to double-click.
+    cfucli.exe       the command line. Not needed to share this machine; it is here
                          so the relay can be changed without editing files by hand, and
-                         so recordings can be read back. "upstashcli guide" prints its
+                         so recordings can be read back. "cfucli guide" prints its
                          manual.

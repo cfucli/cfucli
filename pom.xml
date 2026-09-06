@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.github.littlejlib</groupId>
-    <artifactId>littlejlib-upstashcli</artifactId>
+    <groupId>io.github.cfucli</groupId>
+    <artifactId>cfucli</artifactId>
     <version>0.1</version>
     <packaging>pom</packaging>
 
-    <description>upstashcli - remote shell co-driving over an Upstash Redis rendezvous. Both ends dial out, so it crosses NAT without inbound ports or admin rights. One shared terminal two humans can watch and type into, plus a CLI surface so an agent can drive the far end.</description>
+    <description>cfucli - one real shell that two people on different machines can both watch and type into. Both ends dial outbound to a rendezvous relay, so it crosses NAT without an inbound port, a VPN or admin rights, and it skips the relay entirely when both ends are on the same machine. Plus a CLI surface so an agent can drive the far end with exact exit codes and separated streams.</description>
 
     <modules>
         <module>relay</module>
@@ -53,18 +53,18 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.github.littlejlib</groupId>
-                <artifactId>littlejlib-upstashcli-relay</artifactId>
+                <groupId>io.github.cfucli</groupId>
+                <artifactId>cfucli-relay</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.github.littlejlib</groupId>
-                <artifactId>littlejlib-upstashcli-record</artifactId>
+                <groupId>io.github.cfucli</groupId>
+                <artifactId>cfucli-record</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.github.littlejlib</groupId>
-                <artifactId>littlejlib-upstashcli-node</artifactId>
+                <groupId>io.github.cfucli</groupId>
+                <artifactId>cfucli-node</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

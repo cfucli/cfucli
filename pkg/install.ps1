@@ -1,4 +1,4 @@
-# upstashcli installer.
+# cfucli installer.
 #
 # It does two things, and neither can be done by unzipping:
 #
@@ -6,10 +6,10 @@
 #      itself whatever directory you are standing in, but it hands the -jar path to the JVM
 #      untouched - so a relative one is resolved against the CURRENT directory. Double-clicking the
 #      window from Explorer happens to work, because Explorer sets the current directory to the
-#      folder; running "upstashcli" from a terminal anywhere else fails with "Unable to access
+#      folder; running "cfucli" from a terminal anywhere else fails with "Unable to access
 #      jarfile". That difference is exactly the kind that gets reported as "it works for me".
 #
-#   2. Adds this folder to the current user's PATH, so "upstashcli" is a command.
+#   2. Adds this folder to the current user's PATH, so "cfucli" is a command.
 #
 # Re-running is safe, and moving the folder and running it again re-points everything.
 #
@@ -26,7 +26,7 @@ $here = (Split-Path -Parent $MyInvocation.MyCommand.Path).TrimEnd('\')
 function Fail($m) { Write-Host ''; Write-Host ("  [!!] {0}" -f $m) -ForegroundColor Red; Write-Host ''; exit 1 }
 
 Write-Host ''
-Write-Host 'upstashcli installer'
+Write-Host 'cfucli installer'
 Write-Host ("  folder : {0}" -f $here)
 Write-Host ''
 
@@ -49,7 +49,7 @@ if ($major -eq 0) {
 }
 
 # ---- the archive really was unzipped whole -------------------------------------------------
-$want = @{ 'upstashcliapp.exe' = 'upstashcli-app.jar'; 'upstashcli.exe' = 'upstashcli.jar' }
+$want = @{ 'cfucliapp.exe' = 'cfucli-app.jar'; 'cfucli.exe' = 'cfucli.jar' }
 foreach ($exe in $want.Keys) {
     if (-not (Test-Path (Join-Path $here $exe))) { Fail "$exe is missing - unzip the whole archive, not part of it." }
     if (-not (Test-Path (Join-Path $here $want[$exe]))) { Fail ("{0} is missing." -f $want[$exe]) }
@@ -98,10 +98,10 @@ if ($NoShortcut) {
     Write-Host '  [--] -NoShortcut given.'
 } else {
     try {
-        $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'upstashcli.lnk'
+        $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'cfucli.lnk'
         $sh = New-Object -ComObject WScript.Shell
         $s = $sh.CreateShortcut($lnk)
-        $s.TargetPath = Join-Path $here 'upstashcliapp.exe'
+        $s.TargetPath = Join-Path $here 'cfucliapp.exe'
         $s.WorkingDirectory = $here
         $s.Description = 'Share this machine terminal with someone you trust'
         $s.Save()
@@ -115,18 +115,18 @@ if ($NoShortcut) {
 # Run it with the current directory deliberately NOT this folder, because that is the case the
 # stamping above exists to fix and the one that was broken in the shipped zip.
 Write-Host ''
-$out = cmd /c ('cd /d "%TEMP%" && "' + (Join-Path $here 'upstashcli.exe') + '" relay show 2>&1')
+$out = cmd /c ('cd /d "%TEMP%" && "' + (Join-Path $here 'cfucli.exe') + '" relay show 2>&1')
 $rc = $LASTEXITCODE
 $out | ForEach-Object { Write-Host ("       {0}" -f $_) }
 Write-Host ''
-if ($rc -ne 0) { Fail ("upstashcli relay show exited {0} - see above." -f $rc) }
+if ($rc -ne 0) { Fail ("cfucli relay show exited {0} - see above." -f $rc) }
 
-Write-Host '  upstashcli is installed.' -ForegroundColor Green
+Write-Host '  cfucli is installed.' -ForegroundColor Green
 Write-Host ''
 Write-Host '  Double-click the desktop shortcut, or open a NEW terminal and run:'
 Write-Host ''
-Write-Host '      upstashcli relay show      is this machine connected to a relay yet'
-Write-Host '      upstashcli guide           the manual'
+Write-Host '      cfucli relay show      is this machine connected to a relay yet'
+Write-Host '      cfucli guide           the manual'
 Write-Host ''
 Write-Host '  README.txt in this folder explains sharing your machine with someone.'
 Write-Host ''
