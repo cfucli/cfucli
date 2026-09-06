@@ -39,9 +39,23 @@ foreach ($j in @($appJar, $cliJar)) {
 if (Test-Path (Join-Path $root 'dist')) { Remove-Item -Recurse -Force (Join-Path $root 'dist') }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-$jrCandidates = @((Join-Path $root '..\jr\jr.exe')) + @((Get-Command jr.exe -ErrorAction SilentlyContinue).Source)
-$jrExe = $jrCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-if (-not $jrExe) { throw "no jr.exe found - clone https://github.com/littlejlib/jr next to this project" }
+# Test-Path is NOT enough: a dangling symlink answers it true, and Copy-Item then fails with
+# "could not find a part of the path" naming a file you can see in the directory listing. That
+# is not hypothetical - a jr.exe on PATH pointed at a project that had since been moved. So open
+# each candidate for read and take the first that actually yields bytes.
+$jrCandidates = @(
+    $env:JR_EXE
+    Join-Path $root '..\jr\jr.exe'
+    Join-Path $root '..\..\littlejlib\jr\jr.exe'
+    (Get-Command jr.exe -ErrorAction SilentlyContinue).Source
+)
+$jrExe = $jrCandidates | Where-Object { $_ } | Where-Object {
+    try { $s = [System.IO.File]::OpenRead($_); $s.Dispose(); $true } catch { $false }
+} | Select-Object -First 1
+if (-not $jrExe) {
+    throw ("no readable jr.exe found - set JR_EXE, or clone https://github.com/littlejlib/jr next to this project. Tried: " +
+           (($jrCandidates | Where-Object { $_ }) -join '; '))
+}
 
 Copy-Item $jrExe (Join-Path $stage 'cfucliapp.exe')
 Copy-Item $jrExe (Join-Path $stage 'cfucli.exe')
