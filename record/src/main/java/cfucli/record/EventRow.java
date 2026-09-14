@@ -1,7 +1,7 @@
 package cfucli.record;
 
-import xyz.jphil.arcadedb.datahelper.ArcadeData;
-import xyz.jphil.arcadedb.datahelper.TypeDef;
+import datapotter.arcadedbhelper.ArcadeData;
+import datapotter.arcadedbhelper.TypeDef;
 
 /** One recorded moment in a session. {@code text} is exactly what crossed the wire, escape codes
  *  and all, because a replay needs them; {@code plain} is the same thing with the escapes taken

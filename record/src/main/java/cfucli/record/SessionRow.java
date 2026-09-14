@@ -1,7 +1,7 @@
 package cfucli.record;
 
-import xyz.jphil.arcadedb.datahelper.ArcadeData;
-import xyz.jphil.arcadedb.datahelper.TypeDef;
+import datapotter.arcadedbhelper.ArcadeData;
+import datapotter.arcadedbhelper.TypeDef;
 
 @ArcadeData
 public final class SessionRow extends SessionRow_A {

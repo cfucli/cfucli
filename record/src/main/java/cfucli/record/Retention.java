@@ -2,8 +2,8 @@ package cfucli.record;
 
 import module java.base;
 import com.arcadedb.database.Database;
-import xyz.jphil.arcadedb.datahelper.Delete;
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import datapotter.arcadedbhelper.Delete;
+import static datapotter.arcadedbhelper.Query.query;
 
 /** Recordings do not accumulate for ever. A session's transcript is useful for days, and after
  *  that it is mostly a place for a secret to sit unnoticed. */

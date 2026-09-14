@@ -1,6 +1,6 @@
 package cfucli.app;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 /** One row of the manager: a node running on this machine and what it is doing.
  *  <p>

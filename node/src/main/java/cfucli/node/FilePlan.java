@@ -1,6 +1,6 @@
 package cfucli.node;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 /** Which of the three ways a file is going to travel, how many messages that costs, and the one
  *  sentence a person should be told about it. The sentence is part of the plan rather than a log

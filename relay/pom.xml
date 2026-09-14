@@ -26,16 +26,16 @@
             <artifactId>jackson-dataformat-toml</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-datahelper-base</artifactId>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-datahelper-base</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-datahelper-annotations</artifactId>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-datahelper-annotations</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-datahelper-json</artifactId>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-datahelper-json</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

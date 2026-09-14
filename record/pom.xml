@@ -18,8 +18,8 @@
             <artifactId>cfucli-relay</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-arcadedb-datahelper</artifactId>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-arcadedbhelper</artifactId>
         </dependency>
         <dependency>
             <groupId>com.arcadedb</groupId>
@@ -52,9 +52,9 @@
                     <release>${maven.compiler.release}</release>
                     <annotationProcessorPaths>
                         <path>
-                            <groupId>io.github.xyz-jphil</groupId>
-                            <artifactId>xyz-jphil-arcadedb-datahelper-processor</artifactId>
-                            <version>${datahelper.version}</version>
+                            <groupId>io.github.datapotter</groupId>
+                            <artifactId>datapotter-arcadedbhelper-processor</artifactId>
+                            <version>${arcadedbhelper.processor.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

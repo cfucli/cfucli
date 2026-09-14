@@ -1,7 +1,7 @@
 package cfucli.record;
 
-import xyz.jphil.arcadedb.datahelper.ArcadeData;
-import xyz.jphil.arcadedb.datahelper.TypeDef;
+import datapotter.arcadedbhelper.ArcadeData;
+import datapotter.arcadedbhelper.TypeDef;
 
 /** One command run through {@code exec}. This is the high-level index: what ran, who asked for it,
  *  how long it took, how much it produced and how it ended - enough to decide where to look

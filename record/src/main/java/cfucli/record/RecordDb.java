@@ -5,8 +5,8 @@ import module java.logging;
 import com.arcadedb.database.Database;
 import com.arcadedb.database.DatabaseFactory;
 import cfucli.relay.Home;
-import xyz.jphil.arcadedb.datahelper.InitDoc;
-import xyz.jphil.arcadedb.datahelper.TypeDef;
+import datapotter.arcadedbhelper.InitDoc;
+import datapotter.arcadedbhelper.TypeDef;
 
 /** The embedded recording store, through DatabaseFactory rather than ArcadeDBServer: no HTTP port
  *  to collide with, no startup banner for an agent to parse.

@@ -2,7 +2,7 @@ package cfucli.record;
 
 import module java.base;
 import com.arcadedb.database.Database;
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import static datapotter.arcadedbhelper.Query.query;
 
 /** The read half. Everything an agent needs to go back over a session without reading all of it:
  *  the job index first, then a slice, a search, or one job's output.

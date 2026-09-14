@@ -2,7 +2,7 @@ package cfucli.record;
 
 import module java.base;
 import com.arcadedb.database.Database;
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import static datapotter.arcadedbhelper.Query.query;
 
 /** The write half. One instance per live session, held by the node.
  *  <p>
