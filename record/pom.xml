@@ -54,7 +54,7 @@
                         <path>
                             <groupId>io.github.datapotter</groupId>
                             <artifactId>datapotter-arcadedbhelper-processor</artifactId>
-                            <version>${arcadedbhelper.processor.version}</version>
+                            <version>${arcadedbhelper.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
