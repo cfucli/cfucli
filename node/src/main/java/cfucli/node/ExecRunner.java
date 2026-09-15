@@ -67,14 +67,15 @@ public final class ExecRunner {
     }
 
     static List<String> commandLine(String shell, String command) {
-        var s = shell == null ? "cmd.exe" : shell.toLowerCase();
+        var resolved = shell == null ? cfucli.relay.Platform.defaultShell() : shell;
+        var s = resolved.toLowerCase();
         if (s.contains("powershell") || s.contains("pwsh")) {
-            return List.of(shell, "-NoProfile", "-NonInteractive", "-Command", command);
+            return List.of(resolved, "-NoProfile", "-NonInteractive", "-Command", command);
         }
         if (s.contains("cmd")) {
-            return List.of(shell, "/c", "chcp 65001>nul & " + command);
+            return List.of(resolved, "/c", "chcp 65001>nul & " + command);
         }
-        return List.of(shell, "-c", command);
+        return List.of(resolved, "-c", command);
     }
 
     static Thread drain(InputStream in, String channel, BiConsumer<String, String> onChunk, StringBuilder sink) {

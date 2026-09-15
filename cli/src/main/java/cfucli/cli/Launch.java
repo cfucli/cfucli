@@ -39,8 +39,8 @@ public final class Launch {
     /** javaw so a window does not drag a console along behind it; java when it is missing. */
     static Path java(boolean windowless) {
         var bin = Paths.get(System.getProperty("java.home")).resolve("bin");
-        var w = bin.resolve("javaw.exe");
-        return windowless && Files.isRegularFile(w) ? w : bin.resolve("java.exe");
+        var w = bin.resolve(cfucli.relay.Platform.javaExecutable(true));
+        return windowless && Files.isRegularFile(w) ? w : bin.resolve(cfucli.relay.Platform.javaExecutable(false));
     }
 
     public static NodeClient awaitNode(String node, Duration timeout) {

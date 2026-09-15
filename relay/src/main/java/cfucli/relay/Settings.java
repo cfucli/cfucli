@@ -8,7 +8,7 @@ public final class Settings extends Settings_A {
     String restUrl;
     String restToken;
     String transportPreference = TransportPreference.AUTO.name();
-    String defaultShell = "cmd.exe";
+    String defaultShell = Platform.defaultShell();
     Integer idleTimeoutMinutes = 15;
     Integer maxSessionHours = 4;
     Integer logRetentionDays = 14;

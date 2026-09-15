@@ -56,7 +56,7 @@ public final class NodeClient {
     public NodeClient ensureRunning(Path javaHome, Path jar) {
         if (running()) return this;
         var java = (javaHome == null ? Paths.get(System.getProperty("java.home")) : javaHome)
-                .resolve("bin").resolve("java.exe");
+                .resolve("bin").resolve(cfucli.relay.Platform.javaExecutable(false));
         var cmd = new ArrayList<String>(List.of(java.toString(), "-cp", jar.toString(),
                 "cfucli.node.Node", "--node", node));
         try {

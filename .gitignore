@@ -6,6 +6,9 @@ dist/
 *.jar
 *.aot.config
 
+# Local build tools (e.g. Maven), fetched on demand, not checked in
+.tools/
+
 # Credentials. dist/ is where the seeded copy lives and is already ignored, but ignore this by
 # NAME as well: the file is read from beside whatever jar is running, so the next copy of it will
 # appear somewhere nobody predicted, and a location-only rule does not cover that.
