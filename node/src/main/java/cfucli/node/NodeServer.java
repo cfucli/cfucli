@@ -66,6 +66,12 @@ public final class NodeServer implements AutoCloseable {
             out.write('\n');
             out.flush();
         } catch (IOException ignored) {
+        } catch (Throwable t) {
+            // A connection dropped with no answer at all is the "looked healthy and silently did
+            // nothing" failure this whole tool exists to avoid - so even something handle()
+            // itself did not expect gets logged here, not swallowed by the executor.
+            System.err.println("[node] serve() failed unexpectedly: " + t);
+            t.printStackTrace();
         }
     }
 
@@ -74,7 +80,7 @@ public final class NodeServer implements AutoCloseable {
             var req = Wire.parse(line);
             var verb = req.get("verb").asText();
             return Wire.ok(service.dispatch(verb, req.get("args")));
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
             return Wire.fail(message(e));
         }
     }

@@ -14,9 +14,23 @@ public interface RelayTransport extends AutoCloseable {
     String name();
 
     /** True when nothing this transport does crosses a network or costs a metered command.
-     *  Everything above the seam that has to choose between latency and thrift reads this. */
+     *  Everything above the seam that has to choose between latency and thrift reads this.
+     *  <p>
+     *  Specifically the loopback: both ends are one computer, so a file transfer has a filesystem
+     *  to cross rather than a wire. A LAN or NAT-punched peer is a different machine and must not
+     *  answer this true, however fast and free it also is - see {@link #direct()} for that. */
     default boolean local() {
         return false;
+    }
+
+    /** True when this transport is a private pipe straight to the other end - the loopback, a LAN
+     *  connection, or a NAT-punched one - as opposed to Upstash, which is shared, metered, and
+     *  capped in message size. A file transfer reads this to decide whether the relay's chunk
+     *  threshold and size ceiling apply at all; nothing about this implies the two ends share a
+     *  filesystem, which is what {@link #local()} is for. Defaults to {@link #local()} because
+     *  every local transport is also direct. */
+    default boolean direct() {
+        return local();
     }
 
     /** How long output may be gathered before it is sent. The relay path coalesces because a

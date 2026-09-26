@@ -15,6 +15,9 @@ public final class Settings extends Settings_A {
     Boolean recordOutput = Boolean.TRUE;
     String largeFileExchangeDir;
     Long largeFileThresholdBytes = 256L * 1024;
+    Boolean lanDirect = Boolean.TRUE;
+    String identityName;
+    Boolean presenceAvailable = Boolean.FALSE;
     Double terminalFontSize = 13.5;
     String appJar;
 }

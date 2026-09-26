@@ -27,6 +27,16 @@ public interface FileEnd {
     /** True when the far end has been refused and told why, so the caller must not proceed. */
     boolean refuse(String what);
 
+    /** True when the link the two ends are actually talking over right now is a private wire -
+     *  LAN, or a future NAT-punched one - rather than the metered relay. Distinct from
+     *  {@link #sameMachine()}: there is still a real transfer to make, but the 256K threshold and
+     *  the chunk size that threshold was sized for do not apply, because nothing here is billed
+     *  by the message. Defaults false so a caller who has not looked keeps the conservative
+     *  relay-sized behaviour. */
+    default boolean directLink() {
+        return false;
+    }
+
     /** Whether the far end has a shared exchange folder. Meaningful on a viewer, which learns it
      *  from the host's STATE frame; a host does not consult it, because a get request carries the
      *  viewer's own answer instead of relying on a stale one. */

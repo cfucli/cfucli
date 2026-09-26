@@ -69,6 +69,11 @@ public final class SettingsStore {
         var font = num(raw, "terminalFontSize");
         if (font != null) s.terminalFontSize(font.doubleValue());
         s.appJar(str(raw, "appJar"));
+        var lan = raw.get("landirect");
+        if (lan != null) s.lanDirect(Boolean.parseBoolean(String.valueOf(lan)));
+        s.identityName(str(raw, "identityName"));
+        var avail = raw.get("presenceavailable");
+        if (avail != null) s.presenceAvailable(Boolean.parseBoolean(String.valueOf(avail)));
         return s;
     }
 
@@ -99,6 +104,9 @@ public final class SettingsStore {
         put(lines, "largeFileThresholdBytes", s.largeFileThresholdBytes());
         put(lines, "terminalFontSize", s.terminalFontSize());
         put(lines, "appJar", s.appJar());
+        put(lines, "lanDirect", s.lanDirect());
+        put(lines, "identityName", s.identityName());
+        put(lines, "presenceAvailable", s.presenceAvailable());
         try {
             Files.writeString(path(), String.join(System.lineSeparator(), lines) + System.lineSeparator(),
                     StandardCharsets.UTF_8);

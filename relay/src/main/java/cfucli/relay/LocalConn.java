@@ -19,15 +19,22 @@ final class LocalConn implements AutoCloseable {
     }
 
     static LocalConn open(int port) {
+        return open(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 3000);
+    }
+
+    /** @param connectTimeoutMs kept short for a LAN candidate being raced against several others -
+     *          an address with nobody listening, or on a network this machine cannot even route
+     *          to, must not hold the race up for the OS's own much longer default. */
+    static LocalConn open(InetSocketAddress address, int connectTimeoutMs) {
         try {
             var s = new Socket();
-            s.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 3000);
+            s.connect(address, connectTimeoutMs);
             s.setTcpNoDelay(true);
             return new LocalConn(s,
                     new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8)),
                     new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8)));
         } catch (IOException e) {
-            throw new UncheckedIOException("cannot reach the local session on port " + port, e);
+            throw new UncheckedIOException("cannot reach " + address, e);
         }
     }
 

@@ -38,7 +38,7 @@ final class FileTake {
             case FileRoute.SAME_MACHINE -> copy(xferId, Paths.get(Wire.str(n, SOURCE, "")), target);
             case FileRoute.SHARED -> fromShared(xferId, Wire.str(n, RELATIVE, ""), target, size, sha,
                     Wire.l(n, WAIT_MS, FileMover.DEFAULT_WAIT.toMillis()));
-            default -> inbound.put(xferId, new FileRecv(xferId, name, target, size, sha, (int) Wire.l(n, CHUNKS, 1)));
+            default -> inbound.put(xferId, new FileRecv(xferId, name, target, size, sha, (int) Wire.l(n, CHUNKS, 1), route));
         }
     }
 
@@ -51,7 +51,7 @@ final class FileTake {
         mover.submit(xferId, () -> {
             var placed = recv.finish();
             inbound.remove(xferId);
-            mover.complete(xferId, placed, recv.bytes, recv.millis(), FileRoute.RELAY);
+            mover.complete(xferId, placed, recv.bytes, recv.millis(), recv.route);
         });
     }
 
@@ -64,8 +64,8 @@ final class FileTake {
         var source = FilePaths.require(Wire.str(n, PATH, null));
         var size = FilePaths.size(source);
         var plan = FileRoute.choose(Wire.str(n, VIA, FileRoute.AUTO), source.getFileName().toString(), size,
-                mover.threshold(), mover.end.sameMachine(), FileStage.available(mover.end.settings()),
-                Wire.bool(n, SHARED, false));
+                mover.threshold(), mover.end.sameMachine(), mover.end.directLink(),
+                FileStage.available(mover.end.settings()), Wire.bool(n, SHARED, false));
         var force = Wire.bool(n, FORCE, false);
         var waitMs = Wire.l(n, WAIT_MS, FileMover.DEFAULT_WAIT.toMillis());
         mover.end.note("get " + xferId + ": " + source + " " + FileRoute.human(size) + " - " + plan.why());

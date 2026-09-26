@@ -14,6 +14,7 @@ public final class NodeService implements AutoCloseable {
     final Settings settings;
     final RecordDb store;
     final Housekeeping housekeeping;
+    final PresenceBeat presenceBeat;
 
     volatile TransportChoice transport, viewerTransport;
     volatile HostSession host;
@@ -28,6 +29,7 @@ public final class NodeService implements AutoCloseable {
         this.settings = settings;
         this.store = RecordDb.open(node);
         this.housekeeping = Housekeeping.start(this::sweep);
+        this.presenceBeat = PresenceBeat.start(settings, node, this::relay);
     }
 
     /** What the timer runs. Whatever is live here is excluded by name rather than by age, because a
@@ -112,6 +114,12 @@ public final class NodeService implements AutoCloseable {
             case "status" -> status(a);
             case "host" -> startHost(a);
             case "join" -> join(a);
+            case "available" -> setAvailable(a);
+            case "online" -> online();
+            case "request" -> request(a);
+            case "requests" -> pendingRequests();
+            case "approve" -> approve(a);
+            case "decline" -> decline(a);
             case "keys" -> keys(a);
             case "exec" -> exec(a);
             case "wait" -> waitFor(a);
@@ -196,6 +204,7 @@ public final class NodeService implements AutoCloseable {
             if (h.expiryNote() == null) hn.putNull("expires"); else hn.put("expires", h.expiryNote());
             hn.put("sharedExchange", FileStage.available(settings));
             hn.put("linkTransport", h.linkTransportName() == null ? "none" : h.linkTransportName());
+            hn.put("directLink", h.directLink());
             // Only when asked for. It is the host's own machine and their own password, but it
             // should never land in a transcript just because someone ran status.
             if (Wire.bool(a, "showPassword", false)) {
@@ -213,6 +222,7 @@ public final class NodeService implements AutoCloseable {
             if (vt != null) {
                 vn.put("transport", vt.description());
                 vn.put("local", vt.transport().local());
+                vn.put("direct", vt.transport().direct());
             }
             if (v.peekRefusal() != null) vn.put("lastRefusal", v.peekRefusal());
             n.set("viewer", vn);
@@ -272,6 +282,104 @@ public final class NodeService implements AutoCloseable {
         }
         n.set("status", Json.status(viewer.status()));
         return n;
+    }
+
+    /** Turns discoverability on or off and persists the choice, so it survives this node's own
+     *  restart without anyone having to remember to say it again. Being available means "ask me" -
+     *  it is not itself consent to any particular request; see {@link #approve}. */
+    JsonNode setAvailable(JsonNode a) {
+        var on = Wire.bool(a, "value", true);
+        var identity = requireIdentity();
+        settings.presenceAvailable(on);
+        SettingsStore.update(s -> s.presenceAvailable(on));
+        // Don't make the caller wait out the beat's own thirty-second rhythm to become visible -
+        // the beat thread keeps it fresh from here, but the FIRST one happens now.
+        if (on) Presence.heartbeat(relay(), identity, node);
+        return Wire.obj().put("available", on).put("identityName", identity);
+    }
+
+    /** Who is around right now, freshest name first is not needed - alphabetical is stable across
+     *  repeated calls, which matters more for something a human reads and re-reads. */
+    JsonNode online() {
+        var list = Presence.list(relay());
+        return Json.array(list.stream().map(e -> Wire.obj()
+                .put("identity", e.identity())
+                .put("node", e.node())
+                .put("lastSeenSecondsAgo", Duration.between(e.lastSeen(), Instant.now()).toSeconds())
+        ).toList());
+    }
+
+    /** Send a connect request instead of being handed a session id and password - and when it is
+     *  accepted, join straight away, so this one call is the whole thing from the requester's
+     *  side. Blocks until the far end answers or the wait runs out; a "no answer" is not the same
+     *  as a decline, and says so. */
+    JsonNode request(JsonNode a) {
+        var target = Wire.str(a, "identity", "");
+        if (target.isBlank()) throw new IllegalArgumentException("request needs --identity <name> - see 'online'");
+        var me = requireIdentity();
+        var wait = Duration.ofMillis(Wire.l(a, "waitMs", Duration.ofSeconds(60).toMillis()));
+        var requestId = Presence.sendRequest(relay(), target, me, node);
+        var reply = Presence.awaitReply(relay(), me, requestId, wait);
+        if (reply == null) throw new IllegalStateException(target + " did not answer within " + wait.toSeconds()
+                + "s - they may be offline, or not available for requests right now");
+        if (!reply.accepted()) throw new IllegalStateException(target + " declined"
+                + (reply.reason() != null && !reply.reason().isBlank() ? ": " + reply.reason() : ""));
+        return join(Wire.obj().put("sessionId", reply.sessionId()).put("password", reply.password()));
+    }
+
+    /** Live, on demand - not cached, so there is nothing here that can go stale between one call
+     *  and the next. A request left unanswered simply keeps showing up until it expires on the
+     *  relay on its own. */
+    JsonNode pendingRequests() {
+        var me = requireIdentity();
+        var list = Presence.pollRequests(relay(), me);
+        return Json.array(list.stream().map(r -> Wire.obj()
+                .put("requesterIdentity", r.requesterIdentity())
+                .put("requestId", r.requestId())
+                .put("fromNode", r.fromNode())
+                .put("secondsAgo", Duration.between(r.at(), Instant.now()).toSeconds())
+        ).toList());
+    }
+
+    /** The actual consent - being available only means "ask me", this is the yes. Starts hosting
+     *  exactly as {@code host} would (never local-only: the whole point is a requester on another
+     *  machine) and hands the fresh session id and password back to them over the relay, so
+     *  neither side ever has to read either one aloud. */
+    JsonNode approve(JsonNode a) {
+        var found = findPending(a);
+        var hostArgs = Wire.obj();
+        var shell = Wire.str(a, "shell", null);
+        if (shell != null) hostArgs.put("shell", shell);
+        var cwd = Wire.str(a, "cwd", null);
+        if (cwd != null) hostArgs.put("cwd", cwd);
+        var started = startHost(hostArgs);
+        Presence.reply(relay(), found.requesterIdentity(), found.requestId(),
+                new Presence.Reply(true, null, started.path("sessionId").asText(), started.path("password").asText()));
+        return Wire.obj().put("approved", true).put("requesterIdentity", found.requesterIdentity())
+                .set("session", started);
+    }
+
+    JsonNode decline(JsonNode a) {
+        var found = findPending(a);
+        Presence.reply(relay(), found.requesterIdentity(), found.requestId(),
+                new Presence.Reply(false, Wire.str(a, "reason", null), null, null));
+        return Wire.obj().put("declined", true).put("requesterIdentity", found.requesterIdentity());
+    }
+
+    Presence.IncomingRequest findPending(JsonNode a) {
+        var requestId = Wire.str(a, "requestId", "");
+        if (requestId.isBlank()) throw new IllegalArgumentException("needs --requestId <id> - see 'requests'");
+        var me = requireIdentity();
+        return Presence.pollRequests(relay(), me).stream().filter(r -> r.requestId().equals(requestId)).findFirst()
+                .orElseThrow(() -> new NoSuchElementException("no pending request " + requestId
+                        + " - it may already have been answered, or it expired; see 'requests'"));
+    }
+
+    String requireIdentity() {
+        var identity = settings.identityName();
+        if (identity == null || identity.isBlank()) throw new IllegalStateException("set identityName in "
+                + SettingsStore.path() + " first - presence needs a name to be known by");
+        return identity;
     }
 
     JsonNode keys(JsonNode a) {
@@ -605,6 +713,11 @@ public final class NodeService implements AutoCloseable {
             housekeeping.close();
         } catch (Throwable t) {
             System.err.println("[node] stopping housekeeping failed: " + t);
+        }
+        try {
+            presenceBeat.close();
+        } catch (Throwable t) {
+            System.err.println("[node] stopping the presence beat failed: " + t);
         }
         try {
             var v = viewer;

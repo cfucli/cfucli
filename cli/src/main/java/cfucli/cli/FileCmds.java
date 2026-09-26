@@ -53,7 +53,7 @@ final class GetCmd implements Callable<Integer> {
 
 final class TransferOpts {
 
-    @Option(names = "--via", description = "route to use: auto, relay, shared, same-machine (default: ${DEFAULT-VALUE})")
+    @Option(names = "--via", description = "route to use: auto, relay, shared, same-machine, direct (default: ${DEFAULT-VALUE})")
     String via = "auto";
 
     @Option(names = "--force", description = "replace the file at the far side if one is already there")

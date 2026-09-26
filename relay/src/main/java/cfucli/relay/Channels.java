@@ -22,5 +22,21 @@ public final class Channels {
         return NS + ":live";
     }
 
+    /** The shared "who's around" roster - see {@link Presence}. */
+    public static String presence() {
+        return NS + ":presence";
+    }
+
+    /** Requests aimed at one identity, waiting to be noticed. */
+    public static String request(String targetIdentity) {
+        return NS + ":req:" + targetIdentity;
+    }
+
+    /** One request's answer - unique per request, so it needs no packing and no staleness filter
+     *  beyond its own TTL. */
+    public static String reply(String requesterIdentity, String requestId) {
+        return NS + ":reply:" + requesterIdentity + ":" + requestId;
+    }
+
     private Channels() {}
 }

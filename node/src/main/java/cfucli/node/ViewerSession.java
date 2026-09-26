@@ -110,6 +110,11 @@ public final class ViewerSession implements AutoCloseable, FileEnd {
         return transport.local();
     }
 
+    @Override
+    public boolean directLink() {
+        return transport.direct() && !transport.local();
+    }
+
     /** The host is the end that enforces its own restrictions; this end never refuses on its behalf. */
     @Override
     public boolean refuse(String what) {

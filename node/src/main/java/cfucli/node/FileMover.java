@@ -36,7 +36,8 @@ public final class FileMover implements AutoCloseable {
         var source = FilePaths.require(localPath);
         var size = FilePaths.size(source);
         var plan = FileRoute.choose(via, source.getFileName().toString(), size, threshold(),
-                end.sameMachine(), FileStage.available(end.settings()), end.peerShared() || end.sameMachine());
+                end.sameMachine(), end.directLink(), FileStage.available(end.settings()),
+                end.peerShared() || end.sameMachine());
         var xferId = newXferId();
         var f = track(xferId);
         end.note("put " + xferId + ": " + source.getFileName() + " " + FileRoute.human(size) + " - " + plan.why());

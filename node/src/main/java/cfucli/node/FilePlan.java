@@ -18,6 +18,10 @@ public final class FilePlan extends FilePlan_A {
         return FileRoute.RELAY.equals(route);
     }
 
+    public boolean direct() {
+        return FileRoute.DIRECT.equals(route);
+    }
+
     public boolean shared() {
         return FileRoute.SHARED.equals(route);
     }

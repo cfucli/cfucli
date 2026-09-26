@@ -21,6 +21,12 @@ public final class FileWire {
      *  encrypted and base64'd on the way out. */
     public static final int CHUNK_BYTES_DEFAULT = 64 * 1024;
 
+    /** Used only when the link itself is direct - LAN, or a future NAT-punched one - where there
+     *  is no metered message to keep small and no size limit to stay under, so the chunk is sized
+     *  for throughput instead: fewer round trips per megabyte over a pipe that has real bandwidth
+     *  to give. */
+    public static final int CHUNK_BYTES_DIRECT = 4 * 1024 * 1024;
+
     public static byte[] bytes(JsonNode n) {
         return Wire.line(n).getBytes(StandardCharsets.UTF_8);
     }

@@ -2,7 +2,9 @@ package cfucli.relay;
 
 import module java.base;
 
-/** Loopback only, JSON lines, one thread per connection and the connection kept open.
+/** JSON lines, one thread per connection and the connection kept open, bound either to the
+ *  loopback (a same-machine viewer) or to every interface (a LAN viewer, addressed by whichever
+ *  candidate answers).
  *  <p>
  *  Kept open on purpose: the whole reason this exists is to get a keystroke across in
  *  microseconds, and a TCP handshake per frame would spend more time than the work. A read
@@ -27,13 +29,20 @@ public final class LocalServer implements AutoCloseable {
     }
 
     public static LocalServer start(LocalStore store, String token) {
+        return start(store, token, false);
+    }
+
+    /** @param wildcard false binds the loopback only, for a same-machine viewer; true binds every
+     *          interface, so a viewer on the LAN can reach whichever address of this machine's it
+     *          happens to be routed through. */
+    public static LocalServer start(LocalStore store, String token, boolean wildcard) {
         try {
-            var s = new ServerSocket(0, 64, InetAddress.getLoopbackAddress());
+            var s = wildcard ? new ServerSocket(0, 64) : new ServerSocket(0, 64, InetAddress.getLoopbackAddress());
             var server = new LocalServer(store, s, token);
-            Thread.ofPlatform().name("local-accept").daemon().start(server::accept);
+            Thread.ofPlatform().name(wildcard ? "lan-accept" : "local-accept").daemon().start(server::accept);
             return server;
         } catch (IOException e) {
-            throw new UncheckedIOException("cannot open the local relay socket", e);
+            throw new UncheckedIOException("cannot open the " + (wildcard ? "LAN" : "local") + " relay socket", e);
         }
     }
 

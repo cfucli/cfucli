@@ -25,6 +25,7 @@ public final class HostSession implements AutoCloseable, FileEnd {
 
     final List<RelayTransport> transports;
     final LocalRelay localRelay;
+    final LanRelay lanRelay;
     final Database db;
     final HostIdentity identity;
     final PtyHost pty;
@@ -50,10 +51,11 @@ public final class HostSession implements AutoCloseable, FileEnd {
 
     Thread watcher, beater;
 
-    HostSession(List<RelayTransport> transports, LocalRelay localRelay, Database db, HostIdentity identity,
-                PtyHost pty, Recorder recorder, Settings settings, ConsentGate consent) {
+    HostSession(List<RelayTransport> transports, LocalRelay localRelay, LanRelay lanRelay, Database db,
+                HostIdentity identity, PtyHost pty, Recorder recorder, Settings settings, ConsentGate consent) {
         this.transports = transports;
         this.localRelay = localRelay;
+        this.lanRelay = lanRelay;
         this.db = db;
         this.identity = identity;
         this.pty = pty;
@@ -72,16 +74,30 @@ public final class HostSession implements AutoCloseable, FileEnd {
                                     String relayName, Settings settings, ConsentGate consent) {
         var identity = HostIdentity.create(Ids.newSessionId(), Ids.newPassword());
         var local = LocalRelay.start(identity.sessionId(), node);
+        // LAN direct only makes sense once there is a relay to bootstrap discovery over - a
+        // local-only session (relay == null) is never announced anywhere off this machine, so
+        // there is nobody on the LAN who could ever learn where to knock.
+        var lan = relay != null && !Boolean.FALSE.equals(settings == null ? null : settings.lanDirect())
+                ? LanRelay.startQuietly() : null;
         var transports = new ArrayList<RelayTransport>();
         transports.add(local.transport());
+        if (lan != null) transports.add(lan.transport());
         if (relay != null) transports.add(relay);
         var pty = PtyHost.start(shell, cwd, PtyHost.DEFAULT_COLUMNS, PtyHost.DEFAULT_ROWS);
         var where = describe(relayName);
         var recorder = Recorder.open(db, identity.sessionId(), "host", hostName(), shell, where,
                 settings == null || !Boolean.FALSE.equals(settings.recordOutput()));
-        var s = new HostSession(List.copyOf(transports), local, db, identity, pty, recorder, settings, consent);
+        var s = new HostSession(List.copyOf(transports), local, lan, db, identity, pty, recorder, settings, consent);
         for (var t : s.transports) Handshake.announce(t, identity, hostName(), shell);
-        recorder.control("host session announced on " + where);
+        if (lan != null && relay != null) {
+            try {
+                DirectCandidates.announce(relay, identity.sessionId(), DirectCandidates.localAddresses(),
+                        lan.port(), lan.token());
+            } catch (RuntimeException e) {
+                recorder.error("could not advertise a LAN direct address: " + e.getMessage());
+            }
+        }
+        recorder.control("host session announced on " + where + (lan != null ? " and LAN direct" : ""));
         s.beater = Thread.ofPlatform().name("host-beat").daemon().start(s::beat);
         s.watcher = Thread.ofPlatform().name("host-watch").daemon().start(s::watchForViewers);
         s.expiry = SessionExpiry.start(s, settings);
@@ -153,6 +169,12 @@ public final class HostSession implements AutoCloseable, FileEnd {
     public boolean sameMachine() {
         var t = linkTransport;
         return t != null && t.local();
+    }
+
+    @Override
+    public boolean directLink() {
+        var t = linkTransport;
+        return t != null && t.direct() && !t.local();
     }
 
     @Override
@@ -554,6 +576,7 @@ public final class HostSession implements AutoCloseable, FileEnd {
         quietly(() -> recorder.end("host closed the session"));
         for (var t : transports) quietly(() -> Sessions.end(t, sessionId()));
         quietly(localRelay::close);
+        if (lanRelay != null) quietly(lanRelay::close);
         quietly(pty::close);
         quietly(this::changed);
     }

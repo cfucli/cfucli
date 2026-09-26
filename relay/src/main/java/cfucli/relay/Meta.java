@@ -19,7 +19,10 @@ public final class Meta {
             SHELL = "shell",
             LOCKED = "locked",
             VIEW_ONLY = "viewonly",
-            ENDED = "ended";
+            ENDED = "ended",
+            DIRECT_HOSTS = "dhosts",
+            DIRECT_PORT = "dport",
+            DIRECT_TOKEN = "dtoken";
 
     public static final String PROTOCOL_VERSION = "1";
 

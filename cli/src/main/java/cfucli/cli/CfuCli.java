@@ -16,7 +16,8 @@ import picocli.CommandLine.Option;
                 PutCmd.class, GetCmd.class, RunScriptCmd.class,
                 TailCmd.class, EventsCmd.class, GrepCmd.class, JobsCmd.class, JobCmd.class, SummaryCmd.class,
                 EndCmd.class, LockCmd.class, ViewOnlyCmd.class,
-                ForgetCmd.class, ScrubCmd.class, RetainCmd.class, NodeCmd.class, RelayCmd.class, GuideCmd.class})
+                ForgetCmd.class, ScrubCmd.class, RetainCmd.class, NodeCmd.class, RelayCmd.class, GuideCmd.class,
+                AvailableCmd.class, OnlineCmd.class, RequestCmd.class, RequestsCmd.class, ApproveCmd.class, DeclineCmd.class})
 public final class CfuCli implements Callable<Integer> {
 
     @Option(names = {"-h", "--help"}, description = "print the manual")

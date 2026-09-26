@@ -7,7 +7,7 @@ import module java.base;
  *  that rename happens - a truncated or reordered transfer must not become the file. */
 final class FileRecv implements Closeable {
 
-    final String xferId, name, sha;
+    final String xferId, name, sha, route;
     final long size;
     final int chunks;
     final Path target, temp;
@@ -17,13 +17,14 @@ final class FileRecv implements Closeable {
     int received;
     long bytes;
 
-    FileRecv(String xferId, String name, Path target, long size, String sha, int chunks) {
+    FileRecv(String xferId, String name, Path target, long size, String sha, int chunks, String route) {
         this.xferId = xferId;
         this.name = name;
         this.target = target;
         this.size = size;
         this.sha = sha;
         this.chunks = chunks;
+        this.route = route;
         this.temp = FilePaths.tempBeside(target);
     }
 
