@@ -33,10 +33,26 @@ public final class Icons {
 
     static final int[] SIZES = {16, 24, 32, 48, 64, 128, 256};
 
+    /** Through PNG and back, deliberately. On Windows, JavaFX silently ignores a window icon that
+     *  is a {@link WritableImage} from {@link Canvas#snapshot} - the title bar and taskbar show the
+     *  system's default window glyph, with no exception anywhere - while the same pixels loaded
+     *  through the ordinary image loader are used. Measured side by side, 2026-09-26: the drawn
+     *  icons had never once reached the title bar. The tray is unaffected: it goes through
+     *  {@link #awt}. */
     public static List<Image> windowIcons(Color accent) {
         var out = new java.util.ArrayList<Image>(SIZES.length);
-        for (var s : SIZES) out.add(render(s, accent));
+        for (var s : SIZES) out.add(loaded(s, accent));
         return out;
+    }
+
+    static Image loaded(int size, Color accent) {
+        try {
+            var bytes = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(awt(size, accent), "png", bytes);
+            return new Image(new java.io.ByteArrayInputStream(bytes.toByteArray()));
+        } catch (java.io.IOException e) {
+            return render(size, accent);   // in-memory, so this does not happen; the drawn image is still better than none
+        }
     }
 
     public static Image render(int size, Color accent) {
