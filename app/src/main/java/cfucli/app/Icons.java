@@ -3,28 +3,35 @@ package cfucli.app;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.*;
-import javafx.scene.shape.StrokeLineCap;
-import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.FillRule;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 
-/** Drawn rather than shipped. A prompt chevron and a caret on a dark tile say "terminal" at any
- *  size, and the one accent dot - amber where a machine is being shared, cyan where one is being
- *  watched, white for the tray - is what tells two open windows apart on the taskbar. */
+/** The organisation's seal - the vermilion carved seal with a terminal prompt cut from it, the
+ *  same mark as on cfucli.github.io - drawn from its own SVG path data rather than shipped as
+ *  bitmaps, so it is crisp at every size the taskbar, the title bar and the tray ask for.
+ *  <p>
+ *  The accent dot - amber where a machine is being shared, cyan where one is being watched, white
+ *  for the tray - is what tells two open windows apart. It is drawn from 32px up only: below that
+ *  a dot is two pixels of noise, and at 16px the seal alone has to be legible. */
 public final class Icons {
 
     public static final Color
-            BACKDROP_TOP = Color.web("#1B2038"),
-            BACKDROP_BOTTOM = Color.web("#0D1020"),
-            PROMPT = Color.web("#3FD68C"),
             HOST_ACCENT = Color.web("#F2A93B"),
             VIEWER_ACCENT = Color.web("#48C7E8"),
             TRAY_ACCENT = Color.web("#E8EAF2");
 
-    static final int[] SIZES = {16, 24, 32, 48, 64, 128};
+    /** Copied from assets/cfucli-logo.svg in the site repo, viewBox 0 0 1024 1024, even-odd fill:
+     *  the outer seal with its chipped corners, the chevron, and the cursor block cut out of it. */
+    static final String SEAL = "M126 64H900L918 82H960V898L940 918V960H124L104 940H64V126L84 106V64H126Z"
+                               + "M230 370H330L560 512L330 654H230L430 512L230 370Z"
+                               + "M628 428H800V596H628V428Z";
+    static final Color SEAL_RED = Color.web("#B72A22"), RING = Color.web("#0D1020");
+
+    static final int[] SIZES = {16, 24, 32, 48, 64, 128, 256};
 
     public static List<Image> windowIcons(Color accent) {
         var out = new java.util.ArrayList<Image>(SIZES.length);
@@ -40,53 +47,30 @@ public final class Icons {
         return canvas.snapshot(params, new WritableImage(size, size));
     }
 
-    /** Two designs, not one scaled design.
-     *  <p>
-     *  A 16-pixel tab icon has about sixteen device pixels to work with, and the full mark - tile
-     *  border, chevron, caret and a role dot - turns to mush at that size, which is what shipped
-     *  first. So below 24px the mark is one fat chevron in the ROLE colour and nothing else: the
-     *  whole icon then reads as amber or cyan or white, which tells two open windows apart far
-     *  better on a taskbar than a two-pixel dot ever could. */
     static void draw(GraphicsContext g, double s, Color accent) {
-        var radius = s * 0.22;
-        g.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
-                new Stop(0, BACKDROP_TOP), new Stop(1, BACKDROP_BOTTOM)));
-        g.fillRoundRect(0, 0, s, s, radius, radius);
-
-        g.setLineCap(StrokeLineCap.ROUND);
-        g.setLineJoin(StrokeLineJoin.ROUND);
-
-        if (s < 24) {
-            g.setStroke(accent);
-            g.setLineWidth(Math.max(2, s * 0.16));
-            g.beginPath();
-            g.moveTo(s * 0.30, s * 0.24);
-            g.lineTo(s * 0.68, s * 0.50);
-            g.lineTo(s * 0.30, s * 0.76);
-            g.stroke();
-            return;
-        }
-
-        g.setStroke(Color.web("#3A4166"));
-        g.setLineWidth(Math.max(1, s * 0.03));
-        g.strokeRoundRect(s * 0.02, s * 0.02, s * 0.96, s * 0.96, radius, radius);
-
-        g.setStroke(PROMPT);
-        g.setLineWidth(Math.max(1.4, s * 0.09));
+        g.save();
+        g.scale(s / 1024.0, s / 1024.0);
+        g.setFill(SEAL_RED);
+        g.setFillRule(FillRule.EVEN_ODD);
         g.beginPath();
-        g.moveTo(s * 0.26, s * 0.33);
-        g.lineTo(s * 0.48, s * 0.51);
-        g.lineTo(s * 0.26, s * 0.69);
-        g.stroke();
+        g.appendSVGPath(SEAL);
+        g.fill();
+        g.restore();
 
-        g.strokeLine(s * 0.58, s * 0.69, s * 0.78, s * 0.69);
-
+        if (s < 32) return;
+        // Bottom right, over the seal's chipped corner, with a dark ring so it reads against the
+        // red and against whatever colour the taskbar happens to be.
+        var r = s * 0.085;
+        var cx = s * 0.86;
+        var cy = s * 0.86;
+        var ring = r + Math.max(1, s * 0.028);
+        g.setFill(RING);
+        g.fillOval(cx - ring, cy - ring, ring * 2, ring * 2);
         g.setFill(accent);
-        var r = s * 0.11;
-        g.fillOval(s * 0.72 - r, s * 0.26 - r, r * 2, r * 2);
+        g.fillOval(cx - r, cy - r, r * 2, r * 2);
     }
 
-    /** The tray lives in AWT, so the tile has to cross over. Copying the pixels by hand keeps the
+    /** The tray lives in AWT, so the icon has to cross over. Copying the pixels by hand keeps the
      *  javafx-swing module out of the build for the sake of one conversion. */
     public static BufferedImage awt(int size, Color accent) {
         var fx = render(size, accent);

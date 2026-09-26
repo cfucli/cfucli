@@ -18,8 +18,9 @@ public final class Launch {
     }
 
     public static void app(Path jar, String node, List<String> extra) {
-        var cmd = new ArrayList<String>(List.of(java(true).toString(), "-cp", jar.toString(), AppJar.MAIN,
-                "--host", "--node", node));
+        var cmd = new ArrayList<String>(List.of(java(true).toString()));
+        cmd.addAll(dock());
+        cmd.addAll(List.of("-cp", jar.toString(), AppJar.MAIN, "--host", "--node", node));
         cmd.addAll(extra);
         spawn(cmd, node);
     }
@@ -34,6 +35,16 @@ public final class Launch {
         } catch (IOException e) {
             throw new UncheckedIOException("cannot start " + cmd.getFirst(), e);
         }
+    }
+
+    /** On macOS the Dock shows a JVM as "java" with a coffee cup unless told otherwise, and only
+     *  the launch command can tell it - by the time JavaFX starts, the Dock entry exists. The icon
+     *  is the one the installer builds from the logo; a machine without it still gets the name. */
+    static List<String> dock() {
+        if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) return List.of();
+        var icns = cfucli.relay.Home.file("cfucli.icns");
+        return Files.isRegularFile(icns) ? List.of("-Xdock:name=cfucli", "-Xdock:icon=" + icns)
+                                         : List.of("-Xdock:name=cfucli");
     }
 
     /** javaw so a window does not drag a console along behind it; java when it is missing. */

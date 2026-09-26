@@ -289,6 +289,12 @@ public final class NodeService implements AutoCloseable {
      *  it is not itself consent to any particular request; see {@link #approve}. */
     JsonNode setAvailable(JsonNode a) {
         var on = Wire.bool(a, "value", true);
+        var as = Wire.str(a, "identity", null);
+        if (as != null && !as.isBlank()) {
+            var name = as.trim();
+            settings.identityName(name);
+            SettingsStore.update(s -> s.identityName(name));
+        }
         var identity = requireIdentity();
         settings.presenceAvailable(on);
         SettingsStore.update(s -> s.presenceAvailable(on));
@@ -377,8 +383,8 @@ public final class NodeService implements AutoCloseable {
 
     String requireIdentity() {
         var identity = settings.identityName();
-        if (identity == null || identity.isBlank()) throw new IllegalStateException("set identityName in "
-                + SettingsStore.path() + " first - presence needs a name to be known by");
+        if (identity == null || identity.isBlank()) throw new IllegalStateException("no name set yet - presence needs"
+                + " a name to be known by. Set it once with:  cfucli available on --as <your-name>");
         return identity;
     }
 

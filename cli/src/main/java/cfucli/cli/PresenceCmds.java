@@ -15,10 +15,16 @@ final class AvailableCmd implements Callable<Integer> {
     @Parameters(index = "0", arity = "0..1", description = "on or off (default: ${DEFAULT-VALUE})")
     String value = "on";
 
+    @Option(names = "--as", description = "the name others will see and request you by; saved, so it is only needed once")
+    String as;
+
     @Override
     public Integer call() {
         var on = !value.equalsIgnoreCase("off") && !value.equals("0") && !value.equalsIgnoreCase("false");
-        var r = opts.client().call("available", Map.of("value", on), Duration.ofSeconds(30));
+        var args = new LinkedHashMap<String, Object>();
+        args.put("value", on);
+        if (as != null) args.put("identity", as);
+        var r = opts.client().call("available", args, Duration.ofSeconds(30));
         if (opts.json) {
             Out.json(r);
             return 0;
