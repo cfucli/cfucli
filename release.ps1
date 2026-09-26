@@ -22,10 +22,15 @@ $version = ([xml](Get-Content pom.xml)).project.version
 $tag = "v$version"
 $out = Join-Path $PSScriptRoot 'dist\release'
 
+# Only lines shaped like git's own output are trusted: a git wrapper that picks an identity may
+# print a banner of its own on stdout, which would otherwise read as a changed file or a bad hash.
+function Sha([string]$ref) { @(git rev-parse $ref) | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -Last 1 }
+
 if (-not $DryRun) {
-    if (git status --porcelain) { throw 'the working tree is not clean - commit first, so the release matches a public commit' }
+    $dirty = @(git status --porcelain) | Where-Object { $_ -match '^[ MADRCU?!]{2} ' }
+    if ($dirty) { throw "the working tree is not clean - commit first, so the release matches a public commit:`n$($dirty -join "`n")" }
     git fetch -q origin
-    if ((git rev-parse HEAD) -ne (git rev-parse '@{u}')) { throw 'HEAD is not pushed - push first' }
+    if ((Sha HEAD) -ne (Sha '@{u}')) { throw 'HEAD is not pushed - push first' }
 }
 
 function Build([string[]]$mvnArgs) {
@@ -62,6 +67,6 @@ Get-ChildItem $out | ForEach-Object { Write-Host ('  {0,-28} {1,7:N1} MB' -f $_.
 if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; return }
 
 $notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.github.io/install.sh | bash`nWindows (PowerShell):  irm https://cfucli.github.io/install.ps1 | iex"
-& $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (git rev-parse HEAD) --title "cfucli $version" --notes $notes --latest
+& $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes $notes --latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
 Write-Host "published $tag - installers now pick it up"
