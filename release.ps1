@@ -10,6 +10,13 @@
 # The window jar is built once per platform, because JavaFX carries its natives per platform - see
 # the profiles in app/pom.xml. The cli jar carries every platform's natives already and is shared.
 #
+# The Windows launchers cfucli.exe and cfucliapp.exe are jr (github.com/littlejlib/jr) branded with
+# the logo and version info by jr's own -Xjr:make, so Task Manager shows "cfucli" with the seal and
+# the JVM runs inside the named process with an AOT cache. $env:JR_EXE names the jr.exe to brand -
+# a build of a PUBLIC jr commit, whose hash and checksum go into the release notes so the exes can
+# be traced to source. $env:CFUCLI_ICO overrides the icon (default: the site repo's favicon, which
+# sits beside this repo in the workspace).
+#
 # $env:GH names the GitHub CLI to use (default: gh), for machines that pick an identity through a
 # wrapper. Requires a clean, pushed working tree: a release must match a public commit.
 
@@ -21,6 +28,15 @@ $gh = if ($env:GH) { $env:GH } else { 'gh' }
 $version = ([xml](Get-Content pom.xml)).project.version
 $tag = "v$version"
 $out = Join-Path $PSScriptRoot 'dist\release'
+
+$jr = $env:JR_EXE
+if (-not $jr -or -not (Test-Path $jr)) { throw 'set JR_EXE to the jr.exe to brand as cfucli.exe and cfucliapp.exe (a build of a pushed jr commit)' }
+$ico = if ($env:CFUCLI_ICO) { $env:CFUCLI_ICO } else { Join-Path $PSScriptRoot '..\cfucli.github.io\assets\cfucli-favicon.ico' }
+if (-not (Test-Path $ico)) { throw "no icon at $ico - set CFUCLI_ICO" }
+# Windows version resources are four numbers; pom versions are two or three.
+$parts = @($version -split '[.-]' | Where-Object { $_ -match '^\d+$' } | Select-Object -First 4)
+while ($parts.Count -lt 4) { $parts += '0' }
+$winVersion = $parts -join '.'
 
 # Only lines shaped like git's own output are trusted: a git wrapper that picks an identity may
 # print a banner of its own on stdout, which would otherwise read as a changed file or a bad hash.
@@ -58,6 +74,16 @@ Copy-Item app\shade\cfucli-app-mac-aarch64.jar  (Join-Path $out 'cfucli-app-mac-
 Copy-Item app\shade\cfucli-app-mac.jar          (Join-Path $out 'cfucli-app-mac.jar')
 Set-Content -NoNewline -Encoding ASCII (Join-Path $out 'version.txt') $version
 
+# The Windows launchers. FileDescription is the name Task Manager shows for the process.
+foreach ($l in @(@('cfucli.exe', 'cfucli'), @('cfucliapp.exe', 'cfucli window'))) {
+    & $jr "-Xjr:make=$(Join-Path $out $l[0])" "-Xjr:icon=$ico" "-Xjr:version=$winVersion" `
+        "-Xjr:version.FileDescription=$($l[1])" '-Xjr:version.ProductName=cfucli' '-Xjr:version.CompanyName=cfucli' `
+        "-Xjr:version.ProductVersion=$version" '-Xjr:version.LegalCopyright=cfucli contributors' | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $out $l[0]))) { throw "jr could not make $($l[0])" }
+}
+$jrSha = (Get-FileHash -Algorithm SHA256 $jr).Hash.ToLower()
+$jrCommit = @(git -C (Split-Path $jr) rev-parse HEAD 2>$null) | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -Last 1
+
 # LF line endings and two spaces - the format shasum/sha256sum write and the installers parse.
 $sums = Get-ChildItem $out -File | Where-Object Name -ne 'SHA256SUMS' | Sort-Object Name |
     ForEach-Object { '{0}  {1}' -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Name }
@@ -66,7 +92,9 @@ $sums = Get-ChildItem $out -File | Where-Object Name -ne 'SHA256SUMS' | Sort-Obj
 Get-ChildItem $out | ForEach-Object { Write-Host ('  {0,-28} {1,7:N1} MB' -f $_.Name, ($_.Length / 1MB)) }
 if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; return }
 
-$notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.github.io/install.sh | bash`nWindows (PowerShell):  irm https://cfucli.github.io/install.ps1 | iex"
+$notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.github.io/install.sh | bash`nWindows (PowerShell):  irm https://cfucli.github.io/install.ps1 | iex" +
+         "`n`ncfucli.exe and cfucliapp.exe are jr (https://github.com/littlejlib/jr) branded with jr's -Xjr:make." +
+         "`njr commit: $(if ($jrCommit) { $jrCommit } else { 'unknown' })`njr.exe sha256: $jrSha"
 & $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes $notes --latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
 Write-Host "published $tag - installers now pick it up"
