@@ -95,6 +95,10 @@ if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; ret
 $notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.github.io/install.sh | bash`nWindows (PowerShell):  irm https://cfucli.github.io/install.ps1 | iex" +
          "`n`ncfucli.exe and cfucliapp.exe are jr (https://github.com/littlejlib/jr) branded with jr's -Xjr:make." +
          "`njr commit: $(if ($jrCommit) { $jrCommit } else { 'unknown' })`njr.exe sha256: $jrSha"
-& $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes $notes --latest
+# Through a file: Windows PowerShell passes a multi-line string to a native program cut at the first
+# line break - measured, v0.3's notes arrived as their first line only, losing the jr provenance.
+$notesFile = Join-Path $out '..\release-notes.md'
+[IO.File]::WriteAllText($notesFile, $notes + "`n")
+& $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile --latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
 Write-Host "published $tag - installers now pick it up"
