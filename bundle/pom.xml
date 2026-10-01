@@ -214,6 +214,15 @@
                             <vmArg>-Xlog:aot*=off</vmArg>
                             <vmArg>-XX:+DisplayVMOutputToStderr</vmArg>
                         </vmArgs>
+                        <!-- With -Djr.source=url the plugin also writes the whole release into
+                             target/jr/release: cfucli.exe, cfucli-win.jar (the bytes it hashed),
+                             these Mac jars, version.txt, SHA256SUMS and cfucli.update.json. The Mac
+                             jars must already be built (-Pmac, -Pmac-aarch64) or the build fails,
+                             which is why release.ps1 builds them first. -->
+                        <releaseFiles>
+                            <releaseFile>${project.basedir}/shade/cfucli-mac.jar</releaseFile>
+                            <releaseFile>${project.basedir}/shade/cfucli-mac-aarch64.jar</releaseFile>
+                        </releaseFiles>
                     </configuration>
                 </plugin>
             </plugins>

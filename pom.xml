@@ -207,7 +207,7 @@
                     <plugin>
                         <groupId>io.github.jarrunner</groupId>
                         <artifactId>jr-maven-plugin</artifactId>
-                        <version>1.0-SNAPSHOT</version>
+                        <version>1.2.0-SNAPSHOT</version>
                         <executions>
                             <execution>
                                 <!-- verify, not package: an inherited plugin runs before the module's own

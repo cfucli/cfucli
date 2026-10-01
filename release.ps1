@@ -17,8 +17,10 @@
 # config, the sha256 of cfucli-win.jar and this release's download url baked in, plus the icon and
 # version info, so Task Manager shows "cfucli" with the seal. On first run it fetches its jar from
 # this release (and a Java runtime if none is found); "cfucli -Xjr:update" later replaces the exe
-# itself from the update file this script writes into the site repo beside this one
-# (update\cfucli.json there - commit and push that repo after publishing). $env:JR_REPO, the jr
+# itself from the update file the plugin writes beside the release and this script copies into the
+# site repo beside this one (update\cfucli.json there - commit and push that repo after
+# publishing). The plugin also writes the release folder itself - assets, version.txt and
+# SHA256SUMS - so this script only orders the builds and publishes. $env:JR_REPO, the jr
 # working copy the plugin was built from, puts its commit into the release notes so the exe can be
 # traced to source.
 #
@@ -32,10 +34,11 @@ Set-Location $PSScriptRoot
 $gh = if ($env:GH) { $env:GH } else { 'gh' }
 $version = ([xml](Get-Content pom.xml)).project.version
 $tag = "v$version"
-$out = Join-Path $PSScriptRoot 'dist\release'
+$out = Join-Path $PSScriptRoot 'bundle\target\jr\release'
 
 $site = Join-Path $PSScriptRoot '..\cfucli.github.io'
 if (-not $DryRun -and -not (Test-Path (Join-Path $site '.git'))) { throw "no site working copy at $site - the update files go there" }
+$update = Join-Path $site 'update\cfucli.json'
 
 # Only lines shaped like git's own output are trusted: a git wrapper that picks an identity may
 # print a banner of its own on stdout, which would otherwise read as a changed file or a bad hash.
@@ -59,37 +62,25 @@ function Build([string[]]$mvnArgs) {
 }
 
 Write-Host "building $tag"
-# -Djrexe -Djr.source=url: cfucli.exe comes out of this same build, with the sha256 of exactly
-# this jar and this release's download url baked in (parent pom, jrexe; bundle/pom.xml).
-Build @('-Djrexe', '-Djr.source=url', 'clean', 'install')          # every module, the Windows jar and cfucli.exe
+# Order matters. The Mac jars are built before the Windows exe, because the plugin puts them in
+# the release folder and fails if one is missing; they need the other modules installed first.
+Build @('clean', 'install')                                   # every module, the Windows jar
 Build @('-Pmac-aarch64', '-pl', 'bundle', 'package')          # Apple Silicon jar
 Build @('-Pmac', '-pl', 'bundle', 'package')                  # Intel Mac jar
+# -Djrexe -Djr.source=url: jr-maven-plugin builds cfucli.exe with the sha256 of exactly this jar and
+# this release's download url baked in, and writes the whole release into bundle\target\jr\release:
+# the exe, cfucli-win.jar (the bytes it hashed), the Mac jars, version.txt, SHA256SUMS and
+# cfucli.update.json. -Djr.updateMergeFrom keeps the releases already in the site's update file.
+$jrArgs = @('-Djrexe', '-Djr.source=url', '-pl', 'bundle', 'verify')
+if (Test-Path $update) { $jrArgs = @("-Djr.updateMergeFrom=$((Resolve-Path $update).Path)") + $jrArgs }
+Build $jrArgs                                                 # cfucli.exe and the release folder
 
-# Emptied rather than deleted: a folder something still has open (a test server serving it, an
-# Explorer window) cannot be removed on Windows, but its files can.
-New-Item -ItemType Directory -Force -Path $out | Out-Null
-Get-ChildItem $out | Remove-Item -Recurse -Force
-Copy-Item bundle\shade\cfucli.jar              (Join-Path $out 'cfucli-win.jar')
-Copy-Item bundle\shade\cfucli-mac-aarch64.jar  (Join-Path $out 'cfucli-mac-aarch64.jar')
-Copy-Item bundle\shade\cfucli-mac.jar          (Join-Path $out 'cfucli-mac.jar')
-Set-Content -NoNewline -Encoding ASCII (Join-Path $out 'version.txt') $version
-
-# The Windows launcher, built by the first maven run. A baked jar hash that is not the hash of the
-# jar being published would make every first run refuse its download, so check it here.
-$exe = 'bundle\target\jr\cfucli.exe'
-if (-not (Test-Path $exe)) { throw "missing $exe - the jrexe build did not run" }
-$baked = (Get-Content -Raw 'bundle\target\jr\cfucli.jrc.json' | ConvertFrom-Json).jar
-$got = (Get-FileHash -Algorithm SHA256 (Join-Path $out 'cfucli-win.jar')).Hash.ToLower()
-if ($baked.sha256 -ne $got) { throw "$exe carries sha256 $($baked.sha256) but cfucli-win.jar is $got" }
-if ($baked.sources[0].url -ne "https://github.com/cfucli/cfucli/releases/download/$tag/cfucli-win.jar") { throw "$exe downloads from $($baked.sources[0].url), not this release" }
-Copy-Item $exe $out
+$updateOut = Join-Path $out 'cfucli.update.json'
+foreach ($f in @('cfucli.exe', 'cfucli-win.jar', 'cfucli-mac.jar', 'cfucli-mac-aarch64.jar', 'version.txt', 'SHA256SUMS', 'cfucli.update.json')) {
+    if (-not (Test-Path (Join-Path $out $f))) { throw "the release folder has no $f - see the jr:exe output above" }
+}
 $jrRepo = $env:JR_REPO
 $jrCommit = if ($jrRepo) { @(git -C $jrRepo rev-parse HEAD 2>$null) | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -Last 1 }
-
-# LF line endings and two spaces - the format shasum/sha256sum write and the installers parse.
-$sums = Get-ChildItem $out -File | Where-Object Name -ne 'SHA256SUMS' | Sort-Object Name |
-    ForEach-Object { '{0}  {1}' -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Name }
-[IO.File]::WriteAllText((Join-Path $out 'SHA256SUMS'), (($sums -join "`n") + "`n"))
 
 Get-ChildItem $out | ForEach-Object { Write-Host ('  {0,-28} {1,7:N1} MB' -f $_.Name, ($_.Length / 1MB)) }
 if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; return }
@@ -102,21 +93,14 @@ $notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.
 # line break - measured, v0.3's notes arrived as their first line only, losing the jr provenance.
 $notesFile = Join-Path $out '..\release-notes.md'
 [IO.File]::WriteAllText($notesFile, $notes + "`n")
-& $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile --latest
+# Every file in the folder is an asset except the update file, which goes to the site instead.
+$assets = (Get-ChildItem $out -File | Where-Object Name -ne 'cfucli.update.json').FullName
+& $gh release create $tag $assets --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile --latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
 Write-Host "published $tag - installers now pick it up"
 
-# The update file "cfucli -Xjr:update" reads (jr's update format 1): releases newest first, the
-# stable channel on this one. Written only after the release exists, so a url never points at an
-# asset that is not there yet. There is no cfucliapp.json: since 0.4 there is no cfucliapp.exe.
-$updates = Join-Path $site 'update'
-New-Item -ItemType Directory -Force -Path $updates | Out-Null
-$file = Join-Path $updates 'cfucli.json'
-$sha = (Get-FileHash -Algorithm SHA256 (Join-Path $out 'cfucli.exe')).Hash.ToLower()
-$release = [ordered]@{ version = $version; released = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    exe = [ordered]@{ 'windows-x86_64' = [ordered]@{ sha256 = $sha; urls = @("https://github.com/cfucli/cfucli/releases/download/$tag/cfucli.exe") } } }
-$releases = @($release)
-if (Test-Path $file) { $releases += @((Get-Content -Raw $file | ConvertFrom-Json).releases | Where-Object { $_.version -ne $version }) }
-$doc = [ordered]@{ format = 1; app = 'io.github.cfucli:cfucli'; channels = [ordered]@{ stable = $version }; releases = $releases }
-[IO.File]::WriteAllText($file, ($doc | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))
-Write-Host "update file written to $file - commit and push the site repo to offer $version to -Xjr:update"
+# The update file "cfucli -Xjr:update" reads, written by the plugin. Copied to the site only after the
+# release exists, so a url never points at an asset that is not there yet.
+New-Item -ItemType Directory -Force -Path (Split-Path $update) | Out-Null
+Copy-Item $updateOut $update -Force
+Write-Host "update file written to $update - commit and push the site repo to offer $version to -Xjr:update"
