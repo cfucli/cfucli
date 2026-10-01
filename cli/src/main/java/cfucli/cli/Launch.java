@@ -18,9 +18,15 @@ public final class Launch {
     }
 
     public static void app(Path jar, String node, List<String> extra) {
-        var cmd = new ArrayList<String>(List.of(java(true).toString()));
-        cmd.addAll(dock());
-        cmd.addAll(List.of("-cp", jar.toString(), AppJar.MAIN, "--host", "--node", node));
+        var cmd = new ArrayList<String>();
+        if (AppJar.isExe(jar)) {
+            cmd.add(jar.toString());   // cfucliapp.exe: jr starts the JVM and the window itself
+        } else {
+            cmd.add(java(true).toString());
+            cmd.addAll(dock());
+            cmd.addAll(List.of("-cp", jar.toString(), AppJar.MAIN));
+        }
+        cmd.addAll(List.of("--host", "--node", node));
         cmd.addAll(extra);
         spawn(cmd, node);
     }

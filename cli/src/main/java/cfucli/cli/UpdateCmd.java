@@ -31,7 +31,8 @@ final class UpdateCmd implements Callable<Integer> {
         // <home>/versions/<version>/cfucli.jar. Anything else - a jar built from source, or a
         // launcher someone keeps in their own tools folder - is not the installer's to replace,
         // so it gets a fresh install in the default place and is told so.
-        var home = installHome(Self.jar().toAbsolutePath());
+        var home = exeHome();
+        if (home == null) home = installHome(Self.jar().toAbsolutePath());
         if (home != null) {
             pb.environment().put("CFUCLI_HOME", home.toString());
             Out.line("Updating the install in " + home);
@@ -41,6 +42,16 @@ final class UpdateCmd implements Callable<Integer> {
         }
         Out.line("Running: " + cmd.getLast());
         return pb.start().waitFor();
+    }
+
+    /** Since 0.4 the installer puts only cfucli.exe in <home>/bin, and its jar lives in jr's cache;
+     *  jr names the running exe in this property. */
+    static Path exeHome() {
+        var exe = System.getProperty("io.github.jarrunner.jr.exe");
+        if (exe == null || exe.isBlank()) return null;
+        var bin = Paths.get(exe).toAbsolutePath().getParent();
+        if (bin == null || !"bin".equals(String.valueOf(bin.getFileName()))) return null;
+        return bin.getParent();
     }
 
     static Path installHome(Path jar) {

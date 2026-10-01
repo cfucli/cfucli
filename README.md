@@ -18,9 +18,17 @@ mvn install
 
 JDK 25. pty4j comes from the JetBrains maven repository, declared in the root pom.
 
+The Windows launchers `cfucli.exe` and `cfucliapp.exe` are [jr](https://github.com/jarrunner/jr) exes with their config baked in, built by jr-maven-plugin in the opt-in `jrexe` profile (the plugin is not on Maven Central yet):
+
+```n mvn -Djrexe verify                       exes that run the jars just built, in cli/target/jr and app/target/jr
+ mvn -Djrexe -Djr.installDir=<dir> verify also copy them to <dir>, e.g. a folder on your PATH
+ mvn -Djrexe -Djr.source=url verify       release exes: each fetches its jar from this version's GitHub release (release.ps1)
+```n
+A release exe is a single file: on first run it downloads its jar, checks it against the sha256 it carries, and finds or installs a Java 25 runtime; `cfucli -Xjr:update` later replaces it from `https://cfucli.github.io/update/cfucli.json`.
+
 ## Use it
 
-On Windows the two launchers are `cfucli.exe` and `cfucliapp.exe` in `cmdtools` — jr.exe copies with `.jrc` files beside them pointing at the jars built here, so the examples below are what you actually type. Without them, `java -jar cli/shade/cfucli.jar ...` and `java -jar app/shade/cfucli-app.jar ...` are the same thing.
+On Windows the two launchers are `cfucli.exe` and `cfucliapp.exe`, from the installer or built as above, so the examples below are what you actually type. Without them, `java -jar cli/shade/cfucli.jar ...` and `java -jar app/shade/cfucli-app.jar ...` are the same thing.
 
 A shell on this machine, in a window, driven from the cli:
 

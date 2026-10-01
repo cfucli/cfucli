@@ -10,12 +10,14 @@
 # The window jar is built once per platform, because JavaFX carries its natives per platform - see
 # the profiles in app/pom.xml. The cli jar carries every platform's natives already and is shared.
 #
-# The Windows launchers cfucli.exe and cfucliapp.exe are jr (github.com/littlejlib/jr) branded with
-# the logo and version info by jr's own -Xjr:make, so Task Manager shows "cfucli" with the seal and
-# the JVM runs inside the named process with an AOT cache. $env:JR_EXE names the jr.exe to brand -
-# a build of a PUBLIC jr commit, whose hash and checksum go into the release notes so the exes can
-# be traced to source. $env:CFUCLI_ICO overrides the icon (default: the site repo's favicon, which
-# sits beside this repo in the workspace).
+# The Windows launchers cfucli.exe and cfucliapp.exe are jr (github.com/jarrunner/jr), built in the
+# maven build itself by jr-maven-plugin (the jrexe profile in pom.xml): each carries its config, the
+# sha256 of its jar and this release's download url baked in, plus the icon and version info, so
+# Task Manager shows "cfucli" with the seal. On first run an exe fetches its jar from this release
+# (and a Java runtime if none is found); "cfucli -Xjr:update" later replaces the exe itself from
+# the update files this script writes into the site repo beside this one (update\*.json there -
+# commit and push that repo after publishing). $env:JR_REPO, the jr working copy the plugin was
+# built from, puts its commit into the release notes so the exes can be traced to source.
 #
 # $env:GH names the GitHub CLI to use (default: gh), for machines that pick an identity through a
 # wrapper. Requires a clean, pushed working tree: a release must match a public commit.
@@ -29,14 +31,8 @@ $version = ([xml](Get-Content pom.xml)).project.version
 $tag = "v$version"
 $out = Join-Path $PSScriptRoot 'dist\release'
 
-$jr = $env:JR_EXE
-if (-not $jr -or -not (Test-Path $jr)) { throw 'set JR_EXE to the jr.exe to brand as cfucli.exe and cfucliapp.exe (a build of a pushed jr commit)' }
-$ico = if ($env:CFUCLI_ICO) { $env:CFUCLI_ICO } else { Join-Path $PSScriptRoot '..\cfucli.github.io\assets\cfucli-favicon.ico' }
-if (-not (Test-Path $ico)) { throw "no icon at $ico - set CFUCLI_ICO" }
-# Windows version resources are four numbers; pom versions are two or three.
-$parts = @($version -split '[.-]' | Where-Object { $_ -match '^\d+$' } | Select-Object -First 4)
-while ($parts.Count -lt 4) { $parts += '0' }
-$winVersion = $parts -join '.'
+$site = Join-Path $PSScriptRoot '..\cfucli.github.io'
+if (-not $DryRun -and -not (Test-Path (Join-Path $site '.git'))) { throw "no site working copy at $site - the update files go there" }
 
 # Only lines shaped like git's own output are trusted: a git wrapper that picks an identity may
 # print a banner of its own on stdout, which would otherwise read as a changed file or a bad hash.
@@ -60,7 +56,9 @@ function Build([string[]]$mvnArgs) {
 }
 
 Write-Host "building $tag"
-Build @('clean', 'install')                                   # cli jar + the Windows window
+# -Djrexe -Djr.source=url: cfucli.exe and cfucliapp.exe come out of this same build, with the
+# sha256 of exactly these jars and this release's download urls baked in (parent pom, jrexe).
+Build @('-Djrexe', '-Djr.source=url', 'clean', 'install')          # cli jar + the Windows window + both exes
 Build @('-Pmac-aarch64', '-pl', 'app', 'package')             # Apple Silicon window
 Build @('-Pmac', '-pl', 'app', 'package')                     # Intel Mac window
 
@@ -74,15 +72,20 @@ Copy-Item app\shade\cfucli-app-mac-aarch64.jar  (Join-Path $out 'cfucli-app-mac-
 Copy-Item app\shade\cfucli-app-mac.jar          (Join-Path $out 'cfucli-app-mac.jar')
 Set-Content -NoNewline -Encoding ASCII (Join-Path $out 'version.txt') $version
 
-# The Windows launchers. FileDescription is the name Task Manager shows for the process.
-foreach ($l in @(@('cfucli.exe', 'cfucli'), @('cfucliapp.exe', 'cfucli window'))) {
-    & $jr "-Xjr:make=$(Join-Path $out $l[0])" "-Xjr:icon=$ico" "-Xjr:version=$winVersion" `
-        "-Xjr:version.FileDescription=$($l[1])" '-Xjr:version.ProductName=cfucli' '-Xjr:version.CompanyName=cfucli' `
-        "-Xjr:version.ProductVersion=$version" '-Xjr:version.LegalCopyright=cfucli contributors' | Out-Null
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $out $l[0]))) { throw "jr could not make $($l[0])" }
+# The Windows launchers, built by the first maven run. A baked jar hash that is not the hash of the
+# jar being published would make every first run refuse its download, so check it here.
+$exes = @(@('cli\target\jr\cfucli.exe', 'cli\target\jr\cfucli.jrc.json', 'cfucli.jar'),
+          @('app\target\jr\cfucliapp.exe', 'app\target\jr\cfucliapp.jrc.json', 'cfucli-app-win.jar'))
+foreach ($e in $exes) {
+    if (-not (Test-Path $e[0])) { throw "missing $($e[0]) - the jrexe build did not run" }
+    $baked = (Get-Content -Raw $e[1] | ConvertFrom-Json).jar
+    $got = (Get-FileHash -Algorithm SHA256 (Join-Path $out $e[2])).Hash.ToLower()
+    if ($baked.sha256 -ne $got) { throw "$($e[0]) carries sha256 $($baked.sha256) but $($e[2]) is $got" }
+    if ($baked.sources[0].url -ne "https://github.com/cfucli/cfucli/releases/download/$tag/$($e[2])") { throw "$($e[0]) downloads from $($baked.sources[0].url), not this release" }
+    Copy-Item $e[0] $out
 }
-$jrSha = (Get-FileHash -Algorithm SHA256 $jr).Hash.ToLower()
-$jrCommit = @(git -C (Split-Path $jr) rev-parse HEAD 2>$null) | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -Last 1
+$jrRepo = $env:JR_REPO
+$jrCommit = if ($jrRepo) { @(git -C $jrRepo rev-parse HEAD 2>$null) | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -Last 1 }
 
 # LF line endings and two spaces - the format shasum/sha256sum write and the installers parse.
 $sums = Get-ChildItem $out -File | Where-Object Name -ne 'SHA256SUMS' | Sort-Object Name |
@@ -93,8 +96,9 @@ Get-ChildItem $out | ForEach-Object { Write-Host ('  {0,-28} {1,7:N1} MB' -f $_.
 if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; return }
 
 $notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.github.io/install.sh | bash`nWindows (PowerShell):  irm https://cfucli.github.io/install.ps1 | iex" +
-         "`n`ncfucli.exe and cfucliapp.exe are jr (https://github.com/littlejlib/jr) branded with jr's -Xjr:make." +
-         "`njr commit: $(if ($jrCommit) { $jrCommit } else { 'unknown' })`njr.exe sha256: $jrSha"
+         "`n`nOn Windows cfucli.exe and cfucliapp.exe are each a single file: on first run it fetches its jar from this release, checked against the sha256 it carries, and ``cfucli -Xjr:update`` replaces it with the next release." +
+         "`ncfucli.exe and cfucliapp.exe are jr (https://github.com/jarrunner/jr), built by jr-maven-plugin." +
+         "`njr commit: $(if ($jrCommit) { $jrCommit } else { 'unknown' })"
 # Through a file: Windows PowerShell passes a multi-line string to a native program cut at the first
 # line break - measured, v0.3's notes arrived as their first line only, losing the jr provenance.
 $notesFile = Join-Path $out '..\release-notes.md'
@@ -102,3 +106,20 @@ $notesFile = Join-Path $out '..\release-notes.md'
 & $gh release create $tag (Get-ChildItem $out -File).FullName --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile --latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
 Write-Host "published $tag - installers now pick it up"
+
+# The update files "cfucli -Xjr:update" reads (jr's update format 1): releases newest first, the
+# stable channel on this one. Written only after the release exists, so a url never points at an
+# asset that is not there yet.
+$updates = Join-Path $site 'update'
+New-Item -ItemType Directory -Force -Path $updates | Out-Null
+foreach ($u in @(@('cfucli', 'cfucli.exe'), @('cfucliapp', 'cfucliapp.exe'))) {
+    $file = Join-Path $updates "$($u[0]).json"
+    $sha = (Get-FileHash -Algorithm SHA256 (Join-Path $out $u[1])).Hash.ToLower()
+    $release = [ordered]@{ version = $version; released = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        exe = [ordered]@{ 'windows-x86_64' = [ordered]@{ sha256 = $sha; urls = @("https://github.com/cfucli/cfucli/releases/download/$tag/$($u[1])") } } }
+    $releases = @($release)
+    if (Test-Path $file) { $releases += @((Get-Content -Raw $file | ConvertFrom-Json).releases | Where-Object { $_.version -ne $version }) }
+    $doc = [ordered]@{ format = 1; app = "io.github.cfucli:$($u[0])"; channels = [ordered]@{ stable = $version }; releases = $releases }
+    [IO.File]::WriteAllText($file, ($doc | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))
+}
+Write-Host "update files written to $updates - commit and push the site repo to offer $version to -Xjr:update"

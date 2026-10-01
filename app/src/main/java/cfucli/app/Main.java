@@ -6,6 +6,12 @@ package cfucli.app;
 public final class Main {
 
     public static void main(String[] args) {
+        // Answered before JavaFX starts, so the installer can have cfucliapp.exe fetch its jar
+        // without a window opening. The version is the one jr baked into the exe, when there is one.
+        if (args.length == 1 && (args[0].equals("--version") || args[0].equals("-V"))) {
+            System.out.println("cfucli window " + System.getProperty("io.github.jarrunner.jr.app.version", "(not from a release exe)"));
+            return;
+        }
         CfuCliApp.main(args);
     }
 

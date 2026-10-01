@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.cfucli</groupId>
         <artifactId>cfucli</artifactId>
-        <version>0.3</version>
+        <version>0.4</version>
     </parent>
 
     <artifactId>cfucli-cli</artifactId>
@@ -15,6 +15,7 @@
     <properties>
         <main.class>cfucli.cli.CfuCli</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
+        <jrexe.skip>false</jrexe.skip>
     </properties>
 
     <dependencies>
@@ -41,6 +42,30 @@
     </dependencies>
 
     <build>
+        <!-- cfucli.exe, when the jrexe profile of the parent pom is on. Both AOT log switches are
+             load-bearing: they move two different streams of AOT noise off stdout, which "exec"
+             reserves for the command's own output. -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>io.github.jarrunner</groupId>
+                    <artifactId>jr-maven-plugin</artifactId>
+                    <configuration>
+                        <name>cfucli</name>
+                        <appId>io.github.cfucli:cfucli</appId>
+                        <jar>${project.basedir}/shade/cfucli.jar</jar>
+                        <jarUrl>${jrexe.release}/cfucli.jar</jarUrl>
+                        <updateUrl>${jrexe.updates}/cfucli.json</updateUrl>
+                        <fileDescription>cfucli</fileDescription>
+                        <vmArgs>
+                            <vmArg>--enable-native-access=ALL-UNNAMED</vmArg>
+                            <vmArg>-Xlog:aot*=off</vmArg>
+                            <vmArg>-XX:+DisplayVMOutputToStderr</vmArg>
+                        </vmArgs>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

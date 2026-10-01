@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.cfucli</groupId>
     <artifactId>cfucli</artifactId>
-    <version>0.3</version>
+    <version>0.4</version>
     <packaging>pom</packaging>
 
     <description>cfucli - one real shell that two people on different machines can both watch and type into. Both ends dial outbound to a rendezvous relay, so it crosses NAT without an inbound port, a VPN or admin rights, and it skips the relay entirely when both ends are on the same machine. Plus a CLI surface so an agent can drive the far end with exact exit codes and separated streams.</description>
@@ -175,4 +175,62 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <!-- The Windows launchers cfucli.exe and cfucliapp.exe, built by jr's maven plugin
+         (github.com/jarrunner/jr) with their config, icon and version baked in. Opt-in, because
+         the plugin is not on Maven Central yet, so a plain build of this repo must not need it:
+
+             mvn -Djrexe verify                        exes that run the jars just built (dev)
+             mvn -Djrexe -Djr.source=url verify        exes that fetch their jar from the GitHub
+                                                       release of this version - what release.ps1 ships
+
+         A release exe carries the jar's sha256 and fetches the jar on its first run, a Java runtime
+         too if none is found, and updates itself with "cfucli -Xjr:update" from the update files
+         on cfucli.github.io. Output: <module>/target/jr/. Only cli and app build one; the other
+         modules inherit the plugin skipped. -->
+    <profiles>
+        <profile>
+            <id>jrexe</id>
+            <activation>
+                <property>
+                    <name>jrexe</name>
+                </property>
+            </activation>
+            <properties>
+                <jrexe.skip>true</jrexe.skip>
+                <jrexe.release>https://github.com/cfucli/cfucli/releases/download/v${project.version}</jrexe.release>
+                <jrexe.updates>https://cfucli.github.io/update</jrexe.updates>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.github.jarrunner</groupId>
+                        <artifactId>jr-maven-plugin</artifactId>
+                        <version>1.0-SNAPSHOT</version>
+                        <executions>
+                            <execution>
+                                <!-- verify, not package: an inherited plugin runs before the module's own
+                                     shade in the same phase, and would hash the previous jar -->
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>exe</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <skip>${jrexe.skip}</skip>
+                            <icon>${maven.multiModuleProjectDirectory}/pkg/cfucli.ico</icon>
+                            <productName>cfucli</productName>
+                            <companyName>cfucli</companyName>
+                            <copyright>cfucli contributors</copyright>
+                            <!-- 25: the AOT cache and the in-process JVM need it, as the installer does -->
+                            <javaVersion>25+</javaVersion>
+                            <jvmMode>dll</jvmMode>
+                            <aot>true</aot>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
