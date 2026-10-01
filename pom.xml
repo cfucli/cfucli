@@ -14,6 +14,7 @@
         <module>node</module>
         <module>app</module>
         <module>cli</module>
+        <module>bundle</module>
     </modules>
 
     <properties>
@@ -176,18 +177,18 @@
         </pluginManagement>
     </build>
 
-    <!-- The Windows launchers cfucli.exe and cfucliapp.exe, built by jr's maven plugin
-         (github.com/jarrunner/jr) with their config, icon and version baked in. Opt-in, because
+    <!-- The Windows launcher cfucli.exe, built by jr's maven plugin
+         (github.com/jarrunner/jr) with its config, icon and version baked in. Opt-in, because
          the plugin is not on Maven Central yet, so a plain build of this repo must not need it:
 
-             mvn -Djrexe verify                        exes that run the jars just built (dev)
-             mvn -Djrexe -Djr.source=url verify        exes that fetch their jar from the GitHub
+             mvn -Djrexe verify                        an exe that runs the jar just built (dev)
+             mvn -Djrexe -Djr.source=url verify        an exe that fetches its jar from the GitHub
                                                        release of this version - what release.ps1 ships
 
          A release exe carries the jar's sha256 and fetches the jar on its first run, a Java runtime
          too if none is found, and updates itself with "cfucli -Xjr:update" from the update files
-         on cfucli.github.io. Output: <module>/target/jr/. Only cli and app build one; the other
-         modules inherit the plugin skipped. -->
+         on cfucli.github.io. Output: bundle/target/jr/. Only bundle builds one - it is the jar that
+         ships, the cli and the window in one - and the other modules inherit the plugin skipped. -->
     <profiles>
         <profile>
             <id>jrexe</id>

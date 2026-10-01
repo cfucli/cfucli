@@ -23,7 +23,7 @@ TWO WAYS TO USE IT
      transcript, the human cannot see it or type into it, stdin cannot be supplied, and attaching
      to it from outside is awkward. Every one of those is answered below.
 
-  2. A session with another machine.  The far end runs the window app and reads out two things.
+  2. A session with another machine.  The far end opens the window and reads out two things.
 
        cfucli join 123456789 -p ABCD-EFGH --node far
        cfucli exec --node far "dir"
@@ -39,7 +39,10 @@ THE MODEL - four things worth knowing before you start
 
   The window IS the node. So a node started headless has no window and cannot grow one later -
   "screen" will say so honestly rather than pretend. If a human should be able to watch, start it
-  with "console" (or the window app), not with "node start".
+  with "console" (or the window), not with "node start".
+
+  The window is this same cfucli. Run with nothing after it - a double-click, the desktop
+  shortcut - it opens the launcher; "cfucli window" does the same and takes a role directly.
 
   exec is not the shared shell. It runs its own process beside the shell, which is the only way an
   exit code and separated streams can be exact - a shell sitting in a pager or at a password
@@ -81,6 +84,8 @@ VERBS
 
   Starting and stopping
     console [--shell S] [--cwd D] [--headless] [--relay]   a shell on this machine, in a window
+    window [--host | --join <id> -p P | --tray]            the window itself, for a person (also: no arguments)
+      --node N  --shell S  --local
     host [--shell S] [--local]                             share this machine's shell, print id + password
     join <id> -p <password>                                connect to a shared session
     local                                                  sessions hosted on this machine right now

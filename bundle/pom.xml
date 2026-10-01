@@ -7,33 +7,26 @@
         <version>0.4</version>
     </parent>
 
-    <artifactId>cfucli-app</artifactId>
+    <artifactId>cfucli-bundle</artifactId>
     <packaging>jar</packaging>
 
-    <description>The window. One exe, three roles chosen at startup - Host shares its shell, Viewer mirrors one and can type into it, Tray manages whatever is running on this machine. Carries the consent prompt, the live-session banner, the lock and the end button.</description>
+    <description>What ships: the cli and the window shaded into ONE jar, and on Windows the one cfucli.exe that runs it. With no arguments it opens the window; with any, it is the cli. No code of its own - app and cli stay separate modules, so the cli still builds and runs without JavaFX.</description>
 
     <properties>
-        <!-- Not the Application subclass: JavaFX refuses to launch from a shaded jar when main
-             lives on the Application itself. Main is the plain holder that calls launch. -->
-        <main.class>cfucli.app.Main</main.class>
+        <!-- The cli's main, which opens the window itself when given nothing (cfucli.cli.CfuCli) -->
+        <main.class>cfucli.cli.CfuCli</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
-        <app.jar>shade/cfucli-app.jar</app.jar>
+        <bundle.jar>shade/cfucli.jar</bundle.jar>
+        <jrexe.skip>false</jrexe.skip>
     </properties>
 
-    <!-- JavaFX is platform-specific: its jars carry the native libraries, chosen by classifier.
-         With no profile named, the build machine's own natives are used (openjfx's poms detect the
-         OS) and the jar is written to shade/cfucli-app.jar, as it always was. Name a target profile
-         to build for another OS from this one - each target gets its own jar name, so a
-         cross-build never overwrites the jar the local launcher points at.
-
-         Why explicit profiles rather than openjfx's own -Djavafx.platform=<target> hook: that hook
-         is broken under Maven 4. openjfx's parent pom declares
-         <javafx.platform>${javafx.platform}</javafx.platform>, which Maven 4 rejects as a
-         "recursive variable reference" - it then drops every classifier dependency and still
-         reports BUILD SUCCESS, producing a window jar with no natives for ANY platform. Measured
-         2026-09-26 on 4.0.0-rc-5. Hence also the org.openjfx exclusions below and on every
-         classifier dependency: nothing may reach openjfx's own platform detection in a
-         cross-build, or the build machine's natives leak in beside the target's. -->
+    <!-- One jar per platform, because the window's JavaFX carries its natives per platform - the
+         same scheme as app/pom.xml, and for the same reasons (read the comment there before
+         changing it: openjfx's own -Djavafx.platform hook is broken under Maven 4). cfucli-app is
+         taken with its JavaFX excluded, and the profile below supplies the target's. With no
+         profile named the build machine's own natives are used and the jar is shade/cfucli.jar;
+         a named target gets its own name, so a cross-build never overwrites the local one. Only the
+         Windows ones build cfucli.exe. -->
     <profiles>
         <profile>
             <id>host-platform</id>
@@ -62,7 +55,7 @@
             <!-- mvn -Pwin package          Windows x64 -->
             <id>win</id>
             <properties>
-                <app.jar>shade/cfucli-app-win.jar</app.jar>
+                <bundle.jar>shade/cfucli-win.jar</bundle.jar>
             </properties>
             <dependencies>
                 <dependency>
@@ -92,7 +85,8 @@
             <!-- mvn -Pmac package          Intel Mac -->
             <id>mac</id>
             <properties>
-                <app.jar>shade/cfucli-app-mac.jar</app.jar>
+                <bundle.jar>shade/cfucli-mac.jar</bundle.jar>
+                <jrexe.skip>true</jrexe.skip>
             </properties>
             <dependencies>
                 <dependency>
@@ -122,7 +116,8 @@
             <!-- mvn -Pmac-aarch64 package  Apple Silicon Mac -->
             <id>mac-aarch64</id>
             <properties>
-                <app.jar>shade/cfucli-app-mac-aarch64.jar</app.jar>
+                <bundle.jar>shade/cfucli-mac-aarch64.jar</bundle.jar>
+                <jrexe.skip>true</jrexe.skip>
             </properties>
             <dependencies>
                 <dependency>
@@ -152,7 +147,8 @@
             <!-- mvn -Plinux package        Linux x64 -->
             <id>linux</id>
             <properties>
-                <app.jar>shade/cfucli-app-linux.jar</app.jar>
+                <bundle.jar>shade/cfucli-linux.jar</bundle.jar>
+                <jrexe.skip>true</jrexe.skip>
             </properties>
             <dependencies>
                 <dependency>
@@ -183,44 +179,46 @@
     <dependencies>
         <dependency>
             <groupId>io.github.cfucli</groupId>
-            <artifactId>cfucli-node</artifactId>
+            <artifactId>cfucli-cli</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.github.luvml</groupId>
-            <artifactId>luvjfx</artifactId>
-            <version>${luvjfx.version}</version>
+            <groupId>io.github.cfucli</groupId>
+            <artifactId>cfucli-app</artifactId>
+            <version>${project.version}</version>
             <exclusions><exclusion><groupId>org.openjfx</groupId><artifactId>*</artifactId></exclusion></exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.techsenger.jeditermfx</groupId>
-            <artifactId>jeditermfx-ui</artifactId>
-            <exclusions><exclusion><groupId>org.openjfx</groupId><artifactId>*</artifactId></exclusion></exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.techsenger.jeditermfx</groupId>
-            <artifactId>jeditermfx-core</artifactId>
-            <exclusions><exclusion><groupId>org.openjfx</groupId><artifactId>*</artifactId></exclusion></exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
         </dependency>
     </dependencies>
 
     <build>
+        <!-- cfucli.exe, when the jrexe profile of the parent pom is on. The release asset is
+             cfucli-win.jar, the same bytes as the host build on Windows (release.ps1).
+             Both AOT log switches are load-bearing: they move two different streams of AOT noise
+             off stdout, which "exec" reserves for the command's own output. jr adds
+             DisplayVMOutputToStderr by itself on the run that creates the cache, but not on the
+             runs that use it, so it stays here. -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>io.github.jarrunner</groupId>
+                    <artifactId>jr-maven-plugin</artifactId>
+                    <configuration>
+                        <name>cfucli</name>
+                        <appId>io.github.cfucli:cfucli</appId>
+                        <jar>${project.basedir}/${bundle.jar}</jar>
+                        <jarUrl>${jrexe.release}/cfucli-win.jar</jarUrl>
+                        <updateUrl>${jrexe.updates}/cfucli.json</updateUrl>
+                        <fileDescription>cfucli</fileDescription>
+                        <vmArgs>
+                            <vmArg>--enable-native-access=ALL-UNNAMED</vmArg>
+                            <vmArg>-Xlog:aot*=off</vmArg>
+                            <vmArg>-XX:+DisplayVMOutputToStderr</vmArg>
+                        </vmArgs>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -258,7 +256,7 @@
                             </filters>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>project-classifier</shadedClassifierName>
-                            <outputFile>${app.jar}</outputFile>
+                            <outputFile>${bundle.jar}</outputFile>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${main.class}</mainClass>

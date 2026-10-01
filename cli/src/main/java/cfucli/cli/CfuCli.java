@@ -6,10 +6,13 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-/** The agent's surface. Run with nothing, or with --help, it prints the manual rather than a list
- *  of flags: a flag list tells you what may be typed and nothing about what the tool is, and the
- *  first thing anybody arriving here needs is the second. Each verb keeps its own precise --help. */
-@Command(name = "cfucli", version = "cfucli 0.3",
+/** The agent's surface, and since 0.4 the window's door as well. With nothing on the command
+ *  line it opens the window - the same jar carries both, so a double-click, the desktop shortcut
+ *  and a terminal all start the one exe - unless this jar was built without it, when it prints
+ *  the manual as it always did. --help prints the manual rather than a list of flags: a flag list
+ *  tells you what may be typed and nothing about what the tool is, and the first thing anybody
+ *  arriving here needs is the second. Each verb keeps its own precise --help. */
+@Command(name = "cfucli", version = "cfucli 0.4",
         description = "One real shell, watched by a human, driven from here - on this machine or across the internet.",
         subcommands = {ConsoleCmd.class, HostCmd.class, JoinCmd.class, LocalCmd.class, StatusCmd.class, SessionsCmd.class,
                 ExecCmd.class, WaitCmd.class, CancelCmd.class, SendKeysCmd.class, ScreenCmd.class,
@@ -18,7 +21,7 @@ import picocli.CommandLine.Option;
                 EndCmd.class, LockCmd.class, ViewOnlyCmd.class,
                 ForgetCmd.class, ScrubCmd.class, RetainCmd.class, NodeCmd.class, RelayCmd.class, GuideCmd.class,
                 AvailableCmd.class, OnlineCmd.class, RequestCmd.class, RequestsCmd.class, ApproveCmd.class, DeclineCmd.class,
-                UpdateCmd.class})
+                UpdateCmd.class, WindowCmd.class})
 public final class CfuCli implements Callable<Integer> {
 
     @Option(names = {"-h", "--help"}, description = "print the manual")
@@ -29,6 +32,10 @@ public final class CfuCli implements Callable<Integer> {
 
     @Override
     public Integer call() {
+        if (!help && Window.available()) {
+            Window.run(List.of());
+            return 0;
+        }
         System.out.print(GuideCmd.text());
         return 0;
     }

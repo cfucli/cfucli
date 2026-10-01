@@ -56,7 +56,7 @@ Pass `--stdin "text"` or `--stdin-file F` (`-` reads your own stdin) when a comm
 
 ## Driving a machine that is not this one
 
-The far end runs the window app and reads out a nine-digit id and a one-time password. Then `cfucli join <id> -p <password> --node far`, and everything above works the same. If that id turns out to be a session hosted on this machine, the relay is skipped automatically and the loopback is used instead — `status` says which transport a session actually got.
+The far end opens the window (`cfucli` with no arguments) and reads out a nine-digit id and a one-time password. Then `cfucli join <id> -p <password> --node far`, and everything above works the same. If that id turns out to be a session hosted on this machine, the relay is skipped automatically and the loopback is used instead — `status` says which transport a session actually got.
 
 **A joined session is not yet an admitted one.** If the far end is running the window, a human there has to approve the connection; until they do, `status` shows the session but the host has not attached. `put` and `get` say so within three seconds rather than blocking; `exec`'s answer is its timeout.
 

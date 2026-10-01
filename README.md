@@ -6,9 +6,9 @@ When both ends are on the same machine it skips the relay entirely and talks ove
 
 ## The pieces
 
-Five maven modules under an aggregator. `relay` is the transport, framing, end-to-end crypto and session model — no UI, no PTY. `record` is the local ArcadeDB store and its query surface. `node` is the resident half: the PTY, the host and viewer sessions, and a loopback JSON protocol. `app` is the JavaFX window — host, viewer and tray manager in one exe. `cli` is picocli over the loopback protocol.
+Six maven modules under an aggregator. `relay` is the transport, framing, end-to-end crypto and session model — no UI, no PTY. `record` is the local ArcadeDB store and its query surface. `node` is the resident half: the PTY, the host and viewer sessions, and a loopback JSON protocol. `app` is the JavaFX window — host, viewer and tray manager in one exe. `cli` is picocli over the loopback protocol. `bundle` has no code: it shades the cli and the window into the one jar that ships.
 
-Two jars ship: `app/shade/cfucli-app.jar` is the window, `cli/shade/cfucli.jar` is the command line.
+One jar ships, per platform: `bundle/shade/cfucli.jar` (built for the machine you build on; `-Pwin`, `-Pmac`, `-Pmac-aarch64`, `-Plinux` for the others). With no arguments it opens the window, with any it is the command line. `cli/shade/cfucli.jar` and `app/shade/cfucli-app.jar` are still built, for working on one half without the other.
 
 ## Build
 
@@ -18,17 +18,21 @@ mvn install
 
 JDK 25. pty4j comes from the JetBrains maven repository, declared in the root pom.
 
-The Windows launchers `cfucli.exe` and `cfucliapp.exe` are [jr](https://github.com/jarrunner/jr) exes with their config baked in, built by jr-maven-plugin in the opt-in `jrexe` profile (the plugin is not on Maven Central yet):
+The Windows launcher `cfucli.exe` is a [jr](https://github.com/jarrunner/jr) exe with its config baked in, built by jr-maven-plugin in the opt-in `jrexe` profile (the plugin is not on Maven Central yet):
 
-```n mvn -Djrexe verify                       exes that run the jars just built, in cli/target/jr and app/target/jr
- mvn -Djrexe -Djr.installDir=<dir> verify also copy them to <dir>, e.g. a folder on your PATH
- mvn -Djrexe -Djr.source=url verify       release exes: each fetches its jar from this version's GitHub release (release.ps1)
-```n
+```
+ mvn -Djrexe verify                       an exe that runs the jar just built, in bundle/target/jr
+ mvn -Djrexe -Djr.installDir=<dir> verify also copy it to <dir>, e.g. a folder on your PATH
+ mvn -Djrexe -Djr.source=url verify       the release exe: it fetches its jar from this version's GitHub release (release.ps1)
+```
+
 A release exe is a single file: on first run it downloads its jar, checks it against the sha256 it carries, and finds or installs a Java 25 runtime; `cfucli -Xjr:update` later replaces it from `https://cfucli.github.io/update/cfucli.json`.
 
 ## Use it
 
-On Windows the two launchers are `cfucli.exe` and `cfucliapp.exe`, from the installer or built as above, so the examples below are what you actually type. Without them, `java -jar cli/shade/cfucli.jar ...` and `java -jar app/shade/cfucli-app.jar ...` are the same thing.
+On Windows the launcher is `cfucli.exe`, from the installer or built as above, so the examples below are what you actually type. Without it, `java -jar bundle/shade/cfucli.jar ...` is the same thing.
+
+The window, for a person: `cfucli` with nothing after it (the desktop shortcut does exactly that), or `cfucli window` with `--host`, `--join <id> -p <password>` or `--tray` to go straight into a role.
 
 A shell on this machine, in a window, driven from the cli:
 
@@ -40,7 +44,7 @@ cfucli exec --node work "dir"
 Share this machine's shell with someone else — read them the id and the one-time password it prints:
 
 ```
-cfucliapp --host
+cfucli window --host
 ```
 
 Join a session someone else is sharing, then drive it and move files across:

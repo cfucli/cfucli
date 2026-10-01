@@ -20,7 +20,9 @@ public final class Launch {
     public static void app(Path jar, String node, List<String> extra) {
         var cmd = new ArrayList<String>();
         if (AppJar.isExe(jar)) {
-            cmd.add(jar.toString());   // cfucliapp.exe: jr starts the JVM and the window itself
+            cmd.add(jar.toString());   // this cfucli.exe: jr starts the JVM, the window verb the window
+            cmd.addAll(Window.jrArgs());
+            cmd.add("window");
         } else {
             cmd.add(java(true).toString());
             cmd.addAll(dock());
