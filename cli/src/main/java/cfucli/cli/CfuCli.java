@@ -12,7 +12,7 @@ import picocli.CommandLine.Option;
  *  the manual as it always did. --help prints the manual rather than a list of flags: a flag list
  *  tells you what may be typed and nothing about what the tool is, and the first thing anybody
  *  arriving here needs is the second. Each verb keeps its own precise --help. */
-@Command(name = "cfucli", version = "cfucli 0.4",
+@Command(name = "cfucli", version = "cfucli 0.4.1",
         description = "One real shell, watched by a human, driven from here - on this machine or across the internet.",
         subcommands = {ConsoleCmd.class, HostCmd.class, JoinCmd.class, LocalCmd.class, StatusCmd.class, SessionsCmd.class,
                 ExecCmd.class, WaitCmd.class, CancelCmd.class, SendKeysCmd.class, ScreenCmd.class,
@@ -21,7 +21,7 @@ import picocli.CommandLine.Option;
                 EndCmd.class, LockCmd.class, ViewOnlyCmd.class,
                 ForgetCmd.class, ScrubCmd.class, RetainCmd.class, NodeCmd.class, RelayCmd.class, GuideCmd.class,
                 AvailableCmd.class, OnlineCmd.class, RequestCmd.class, RequestsCmd.class, ApproveCmd.class, DeclineCmd.class,
-                UpdateCmd.class, WindowCmd.class})
+                UpdateCmd.class, InstallCmd.class, WindowCmd.class})
 public final class CfuCli implements Callable<Integer> {
 
     @Option(names = {"-h", "--help"}, description = "print the manual")

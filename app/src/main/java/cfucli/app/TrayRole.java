@@ -23,10 +23,15 @@ import javafx.application.Platform;
  *  rather than a menu. */
 public final class TrayRole {
 
+    /** Set once a tray has started in this process; it lives until "Quit the tray" ends the
+     *  process, so a closing launcher must not end it (see Idle). */
+    static volatile boolean started;
+
     ManagerWindow manager;
     TrayIcon icon;
 
     public void start() {
+        started = true;
         Platform.setImplicitExit(false);
         manager = new ManagerWindow();
         if (!SystemTray.isSupported()) {

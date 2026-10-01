@@ -84,20 +84,33 @@ public final class LauncherWindow {
 
         var scene = scene(root);
         Ui.dress(scene);
-        Keys.functionKeys(scene, () -> true, Map.of(
+        // A downloaded exe run from wherever the browser put it: not on the PATH, no shortcut.
+        var installable = SelfInstall.candidate();
+        var keys = new HashMap<KeyCode, Runnable>(Map.of(
                 KeyCode.F2, this::host,
                 KeyCode.F3, this::join,
                 KeyCode.F4, this::manager,
                 KeyCode.F5, this::relaySetup));
+        if (installable != null) {
+            ((javafx.scene.layout.VBox) scene.getRoot()).getChildren().add(hbox($ -> $.spacing(8)).nodes(
+                    label("Not installed: \"cfucli\" is not on the PATH and there is no shortcut.").styleClass("card-detail"),
+                    button("F6  Install on this machine").onAction(e -> install(installable))).node);
+            keys.put(KeyCode.F6, () -> install(installable));
+        }
+        Keys.functionKeys(scene, () -> true, keys);
         Keys.onEscape(scene, stage::close);
         sessionField.node.setOnAction(e -> join());
         passwordField.node.setOnAction(e -> join());
 
         Ui.icons(stage, Icons.TRAY_ACCENT);
         stage.setTitle("cfucli");
+        stage.setOnHidden(e -> Idle.exitIfNothingLeft());
         stage.setScene(scene);
-        var legend = Ui.legend("F2", "share this machine", "F3", "connect to one",
-                "F4", "manager", "F5", "relay setup", "Esc", "close");
+        var legend = installable == null
+                ? Ui.legend("F2", "share this machine", "F3", "connect to one",
+                        "F4", "manager", "F5", "relay setup", "Esc", "close")
+                : Ui.legend("F2", "share this machine", "F3", "connect to one",
+                        "F4", "manager", "F5", "relay setup", "F6", "install", "Esc", "close");
         ((javafx.scene.layout.VBox) scene.getRoot()).getChildren().add(legend.node);
         stage.show();
     }
@@ -140,6 +153,14 @@ public final class LauncherWindow {
             return;
         }
         go.accept(new AppArgs(AppRole.JOIN, node(), null, id, pw, false));
+    }
+
+    void install(java.nio.file.Path exe) {
+        try {
+            SelfInstall.run(exe);
+        } catch (RuntimeException e) {
+            Dialogs.error(stage, "Could not start the installer", Dialogs.reason(e));
+        }
     }
 
     void relaySetup() {

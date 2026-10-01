@@ -86,6 +86,7 @@ VERBS
     console [--shell S] [--cwd D] [--headless] [--relay]   a shell on this machine, in a window
     window [--host | --join <id> -p P | --tray]            the window itself, for a person (also: no arguments)
       --node N  --shell S  --local
+    install                                                put this cfucli.exe on the PATH, with shortcuts (window: F6)
     host [--shell S] [--local]                             share this machine's shell, print id + password
     join <id> -p <password>                                connect to a shared session
     local                                                  sessions hosted on this machine right now

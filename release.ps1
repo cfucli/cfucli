@@ -9,12 +9,12 @@
 #
 # Since 0.4 a release is ONE jar per platform - the cli and the window shaded together by the
 # bundle module - built per platform because the window's JavaFX carries its natives per platform
-# (see the profiles in bundle/pom.xml): cfucli-win.jar, cfucli-mac.jar, cfucli-mac-aarch64.jar.
+# (see the profiles in bundle/pom.xml): cfucli-win-<sha8>.jar, cfucli-mac.jar, cfucli-mac-aarch64.jar.
 # With no arguments the jar opens the window; with any, it is the cli.
 #
 # The Windows launcher cfucli.exe is jr (github.com/jarrunner/jr), built in the maven build itself
 # by jr-maven-plugin (the jrexe profile in pom.xml, configured in bundle/pom.xml): it carries its
-# config, the sha256 of cfucli-win.jar and this release's download url baked in, plus the icon and
+# config, the sha256 of cfucli-win-<sha8>.jar and this release's download url baked in, plus the icon and
 # version info, so Task Manager shows "cfucli" with the seal. On first run it fetches its jar from
 # this release (and a Java runtime if none is found); "cfucli -Xjr:update" later replaces the exe
 # itself from the update file the plugin writes beside the release and this script copies into the
@@ -69,14 +69,17 @@ Build @('-Pmac-aarch64', '-pl', 'bundle', 'package')          # Apple Silicon ja
 Build @('-Pmac', '-pl', 'bundle', 'package')                  # Intel Mac jar
 # -Djrexe -Djr.source=url: jr-maven-plugin builds cfucli.exe with the sha256 of exactly this jar and
 # this release's download url baked in, and writes the whole release into bundle\target\jr\release:
-# the exe, cfucli-win.jar (the bytes it hashed), the Mac jars, version.txt, SHA256SUMS and
+# the exe, cfucli-win-<sha8>.jar (the bytes it hashed), the Mac jars, version.txt, SHA256SUMS and
 # cfucli.update.json. -Djr.updateMergeFrom keeps the releases already in the site's update file.
 $jrArgs = @('-Djrexe', '-Djr.source=url', '-pl', 'bundle', 'verify')
 if (Test-Path $update) { $jrArgs = @("-Djr.updateMergeFrom=$((Resolve-Path $update).Path)") + $jrArgs }
 Build $jrArgs                                                 # cfucli.exe and the release folder
 
 $updateOut = Join-Path $out 'cfucli.update.json'
-foreach ($f in @('cfucli.exe', 'cfucli-win.jar', 'cfucli-mac.jar', 'cfucli-mac-aarch64.jar', 'version.txt', 'SHA256SUMS', 'cfucli.update.json')) {
+# cfucli-win-<sha8>.jar: the Windows jar is named after its own sha256 (bundle/pom.xml), so an exe
+# from any other build of this version asks for a file that does not exist rather than a jar that
+# does not match it.
+foreach ($f in @('cfucli.exe', 'cfucli-win-*.jar', 'cfucli-mac.jar', 'cfucli-mac-aarch64.jar', 'version.txt', 'SHA256SUMS', 'cfucli.update.json')) {
     if (-not (Test-Path (Join-Path $out $f))) { throw "the release folder has no $f - see the jr:exe output above" }
 }
 $jrRepo = $env:JR_REPO

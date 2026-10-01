@@ -34,6 +34,8 @@ On Windows the launcher is `cfucli.exe`, from the installer or built as above, s
 
 The window, for a person: `cfucli` with nothing after it (the desktop shortcut does exactly that), or `cfucli window` with `--host`, `--join <id> -p <password>` or `--tray` to go straight into a role.
 
+Installing without the one-line installer: download `cfucli.exe` from the latest release and double-click it. The window says it is not installed, and F6 (or `cfucli install` in a terminal) puts it in `%USERPROFILE%\cfucli\bin`, adds that to the PATH and creates the shortcuts, exactly as the one-line install does. Windows may warn about an unsigned download first ("More info", then "Run anyway").
+
 A shell on this machine, in a window, driven from the cli:
 
 ```

@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.cfucli</groupId>
         <artifactId>cfucli</artifactId>
-        <version>0.4</version>
+        <version>0.4.1</version>
     </parent>
 
     <artifactId>cfucli-bundle</artifactId>
@@ -192,7 +192,7 @@
 
     <build>
         <!-- cfucli.exe, when the jrexe profile of the parent pom is on. The release asset is
-             cfucli-win.jar, the same bytes as the host build on Windows (release.ps1).
+             cfucli-win-<first 8 hex of its sha256>.jar ({sha8}), the same bytes as the host build on Windows, so an exe can only ever ask for the one jar it was built with.
              Both AOT log switches are load-bearing: they move two different streams of AOT noise
              off stdout, which "exec" reserves for the command's own output. jr adds
              DisplayVMOutputToStderr by itself on the run that creates the cache, but not on the
@@ -206,7 +206,7 @@
                         <name>cfucli</name>
                         <appId>io.github.cfucli:cfucli</appId>
                         <jar>${project.basedir}/${bundle.jar}</jar>
-                        <jarUrl>${jrexe.release}/cfucli-win.jar</jarUrl>
+                        <jarUrl>${jrexe.release}/cfucli-win-{sha8}.jar</jarUrl>
                         <updateUrl>${jrexe.updates}/cfucli.json</updateUrl>
                         <fileDescription>cfucli</fileDescription>
                         <vmArgs>
@@ -215,7 +215,7 @@
                             <vmArg>-XX:+DisplayVMOutputToStderr</vmArg>
                         </vmArgs>
                         <!-- With -Djr.source=url the plugin also writes the whole release into
-                             target/jr/release: cfucli.exe, cfucli-win.jar (the bytes it hashed),
+                             target/jr/release: cfucli.exe, cfucli-win-<sha8>.jar (the bytes it hashed),
                              these Mac jars, version.txt, SHA256SUMS and cfucli.update.json. The Mac
                              jars must already be built (-Pmac, -Pmac-aarch64) or the build fails,
                              which is why release.ps1 builds them first. -->
