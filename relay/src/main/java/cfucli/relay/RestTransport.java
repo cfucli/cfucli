@@ -120,6 +120,28 @@ public final class RestTransport implements RelayTransport {
     }
 
     @Override
+    public void trim(String stream, String minId) {
+        command("XTRIM", stream, "MINID", minId);
+    }
+
+    @Override
+    public List<String> keys(String pattern) {
+        var out = new ArrayList<String>();
+        var cursor = "0";
+        do {
+            var r = command("SCAN", cursor, "MATCH", pattern, "COUNT", "1000");
+            cursor = r.get(0).asText();
+            for (var k : r.get(1)) out.add(k.asText());
+        } while (!"0".equals(cursor));
+        return out;
+    }
+
+    @Override
+    public long ttl(String key) {
+        return command("TTL", key).asLong(-2);
+    }
+
+    @Override
     public void ping() {
         var pong = command("PING");
         if (pong == null || !"PONG".equalsIgnoreCase(pong.asText())) throw new IllegalStateException("PING answered " + pong);

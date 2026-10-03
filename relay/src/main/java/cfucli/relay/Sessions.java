@@ -37,6 +37,29 @@ public final class Sessions {
         t.putMeta(Channels.meta(sessionId), Map.of(Meta.ENDED, "1", Meta.LAST_BEAT, Meta.stamp(Instant.now())), Meta.TTL);
     }
 
+    /** The streams only, not the meta: a viewer still needs the ENDED flag, which expires on its
+     *  own with the meta's TTL, to learn why the session went away. */
+    public static void dropStreams(RelayTransport t, String sessionId) {
+        t.delete(Channels.stream(sessionId, Direction.HOST_TO_VIEWER),
+                Channels.stream(sessionId, Direction.VIEWER_TO_HOST));
+    }
+
+    /** Gives every session stream that has no expiry the ordinary stream TTL. Builds before 0.4.3
+     *  never set one on the viewer's stream, and those builds are still installed on other
+     *  machines, so a host running this one cleans up after them. It sets a TTL rather than
+     *  deleting, so a stream some live session is still using is left alone for hours.
+     *  @return how many keys it gave a TTL */
+    public static int sweep(RelayTransport t) {
+        var fixed = 0;
+        for (var k : t.keys(Channels.NS + ":x:*")) {
+            if (t.ttl(k) == -1) {
+                t.touch(k, Meta.STREAM_TTL);
+                fixed++;
+            }
+        }
+        return fixed;
+    }
+
     public static void purge(RelayTransport t, String sessionId) {
         t.delete(Channels.meta(sessionId),
                 Channels.stream(sessionId, Direction.HOST_TO_VIEWER),

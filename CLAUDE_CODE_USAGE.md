@@ -77,7 +77,8 @@ cfucli get C:\Users\sam\log.txt . --node far                      a directory de
 - **Two ends on one machine** — nothing is transferred; the far end copies the file. Instant, no size limit.
 - **Under `largeFileThresholdBytes`** (256K by default) — through the relay as encrypted 64K chunks.
 - **Over it** — through a folder both machines already have mounted, named by `largeFileExchangeDir` in settings **on both ends**; a synced Google Drive folder is exactly what this is for. Only the relative path crosses the wire, so the two machines may mount it at different absolute paths. Arrival is decided by SHA-256, not by the file appearing, because a sync product gives no signal when it has finished writing.
-- **Over it with no such folder** — refused, with both ways out named. `--via relay` pushes it through anyway; the refusal tells you how many metered messages that is. This is deliberate: a 12M jar is ~190 relay messages, and doing that silently is worse than declining.
+- **Over it with no such folder** — refused, with both ways out named. `--via relay` pushes it through anyway, up to a hard 10M; the refusal tells you how many metered messages that is.
+- **Over 10M with no direct link and no shared folder** — refused, `--via relay` or not. The relay is one free Upstash database shared by every machine on the credential, with 256MB of storage, and a file takes nearly twice its size there. Compress it, use a shared folder, or publish it (a GitHub release, a Drive link) and download it on the far end with `exec`. A direct LAN link has no limit.
 
 Every transfer is checksummed, nothing is overwritten without `--force`, and the route taken is in the answer. `locked` and `view-only` refuse both verbs, the same as `exec`. `--json` gives `{ok, route, path, bytes, millis}` or `{ok:false, error}`; exit code 0 or 4.
 

@@ -24,6 +24,13 @@ public final class FileRoute {
 
     public static final long DEFAULT_THRESHOLD = 256L * 1024;
 
+    /** The most the relay will carry, even when asked. Not a setting, on purpose: the relay is one
+     *  free Upstash database shared by everyone who has the credential, capped at 256MB of storage,
+     *  and a file costs nearly twice its size there once it is encrypted and base64'd. A 116MB push
+     *  in 2026-09 left a 211MB stream behind it, and the 25MB one in 2026-10 hung the session it was
+     *  pushed through. The shell is what the relay is for; bulk files go another way. */
+    public static final long RELAY_MAX = 10L * 1024 * 1024;
+
     /** @param asked what the caller insisted on, or auto
      *  @param directLink true when the link the two ends are actually talking over right now is a
      *          private one - see {@link FileEnd#directLink()} - so neither the relay's size ceiling
@@ -42,7 +49,7 @@ public final class FileRoute {
             case DIRECT -> directLink
                     ? plan(DIRECT, size, "over the direct link because you asked for it", FileWire.CHUNK_BYTES_DIRECT)
                     : refuse("--via direct, but this session is not on a direct link right now - it is going through the relay");
-            case RELAY -> plan(RELAY, size, "through the relay because you asked for it"
+            case RELAY -> size > RELAY_MAX ? refuse(tooBigForRelay(name, size)) : plan(RELAY, size, "through the relay because you asked for it"
                                             + (size > limit ? " - " + messages(size) + ", over the "
                                                               + human(limit) + " threshold" : ""));
             case SHARED -> bothShared
@@ -61,6 +68,8 @@ public final class FileRoute {
         if (size <= limit) return plan(RELAY, size, "through the relay - " + messages(size));
         if (bothShared) return plan(SHARED, size, "through the shared exchange folder, being over the "
                                                   + human(limit) + " relay threshold");
+        if (size > RELAY_MAX) return refuse(tooBigForRelay(name, size) + System.lineSeparator()
+                      + "  (" + missing(senderShared, receiverShared) + ")");
         return refuse(name + " is " + human(size) + ", over the " + human(limit)
                       + " relay threshold, and " + missing(senderShared, receiverShared) + "."
                       + System.lineSeparator() + "Two ways on:"
@@ -69,6 +78,18 @@ public final class FileRoute {
                       + " already sync is exactly what this is for"
                       + System.lineSeparator() + "  - pass --via relay to push it through the relay anyway: "
                       + messages(size));
+    }
+
+    static String tooBigForRelay(String name, long size) {
+        var nl = System.lineSeparator();
+        return name + " is " + human(size) + ", and the relay carries at most " + human(RELAY_MAX) + " - it is for the"
+               + " shell, and every machine on this relay shares one small database." + nl + "Ways on:"
+               + nl + "  - compress it first (gzip, zip, strip a binary) if that brings it under " + human(RELAY_MAX)
+               + nl + "  - set largeFileExchangeDir in " + SettingsStore.path() + " on BOTH machines, to a folder"
+               + " they both have mounted (a synced Google Drive folder)"
+               + nl + "  - publish it somewhere (a GitHub release, a Drive link) and download it on the far end"
+               + " with cfucli exec"
+               + nl + "  - on the same network, a direct link has no limit: check lanDirect is on at both ends";
     }
 
     static String missing(boolean senderShared, boolean receiverShared) {

@@ -364,11 +364,23 @@ public final class HostSession implements AutoCloseable, FileEnd {
     }
 
     void beat() {
+        // Once per session, on the relay only: give any stream an older build left without an
+        // expiry one now. Kept off the start path because it is a network round trip.
+        for (var t : transports) {
+            if (t.direct()) continue;
+            try {
+                var n = Sessions.sweep(t);
+                if (n > 0) note("gave " + n + " leftover relay stream" + (n == 1 ? "" : "s") + " an expiry");
+            } catch (RuntimeException e) {
+                problem("relay sweep failed on " + t.name() + ": " + e);
+            }
+        }
         while (!closed) {
             for (var t : transports) {
                 try {
                     Handshake.beat(t, sessionId());
                     t.touch(Channels.stream(sessionId(), Direction.HOST_TO_VIEWER), Meta.STREAM_TTL);
+                    t.touch(Channels.stream(sessionId(), Direction.VIEWER_TO_HOST), Meta.STREAM_TTL);
                 } catch (RuntimeException e) {
                     problem("heartbeat failed on " + t.name() + ": " + e);
                 }
@@ -574,7 +586,10 @@ public final class HostSession implements AutoCloseable, FileEnd {
         quietly(files::close);
         quietly(exec::close);
         quietly(() -> recorder.end("host closed the session"));
-        for (var t : transports) quietly(() -> Sessions.end(t, sessionId()));
+        for (var t : transports) {
+            quietly(() -> Sessions.end(t, sessionId()));
+            quietly(() -> Sessions.dropStreams(t, sessionId()));
+        }
         quietly(localRelay::close);
         if (lanRelay != null) quietly(lanRelay::close);
         quietly(pty::close);

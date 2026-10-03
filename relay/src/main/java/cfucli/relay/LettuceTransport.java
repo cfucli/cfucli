@@ -110,6 +110,30 @@ public final class LettuceTransport implements RelayTransport {
     }
 
     @Override
+    public void trim(String stream, String minId) {
+        writeConn.sync().xtrim(stream, XTrimArgs.Builder.minId(minId));
+    }
+
+    @Override
+    public List<String> keys(String pattern) {
+        var out = new ArrayList<String>();
+        var sync = writeConn.sync();
+        KeyScanCursor<String> c = sync.scan(ScanArgs.Builder.matches(pattern).limit(1000));
+        out.addAll(c.getKeys());
+        while (!c.isFinished()) {
+            c = sync.scan(c, ScanArgs.Builder.matches(pattern).limit(1000));
+            out.addAll(c.getKeys());
+        }
+        return out;
+    }
+
+    @Override
+    public long ttl(String key) {
+        var t = writeConn.sync().ttl(key);
+        return t == null ? -2 : t;
+    }
+
+    @Override
     public void ping() {
         var pong = writeConn.sync().ping();
         if (!"PONG".equalsIgnoreCase(pong)) throw new IllegalStateException("PING answered " + pong);

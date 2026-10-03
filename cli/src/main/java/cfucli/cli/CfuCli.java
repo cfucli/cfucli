@@ -12,7 +12,7 @@ import picocli.CommandLine.Option;
  *  the manual as it always did. --help prints the manual rather than a list of flags: a flag list
  *  tells you what may be typed and nothing about what the tool is, and the first thing anybody
  *  arriving here needs is the second. Each verb keeps its own precise --help. */
-@Command(name = "cfucli", version = "cfucli 0.4.2",
+@Command(name = "cfucli", version = "cfucli 0.4.3",
         description = "One real shell, watched by a human, driven from here - on this machine or across the internet.",
         subcommands = {ConsoleCmd.class, HostCmd.class, JoinCmd.class, LocalCmd.class, StatusCmd.class, SessionsCmd.class,
                 ExecCmd.class, WaitCmd.class, CancelCmd.class, SendKeysCmd.class, ScreenCmd.class,

@@ -70,6 +70,23 @@ public interface RelayTransport extends AutoCloseable {
 
     void delete(String... keys);
 
+    /** Drops every entry older than {@code minId} - the reader calls this with what it has already
+     *  consumed, so a stream on the relay holds only what is in flight rather than a whole file.
+     *  Storage on the relay is capped for the whole database; on the loopback it is not, and the
+     *  local store trims by length anyway, so the default does nothing. */
+    default void trim(String stream, String minId) {}
+
+    /** Keys matching a glob, for the sweep that gives forgotten keys a TTL. Empty where there is no
+     *  shared database to sweep. */
+    default List<String> keys(String pattern) {
+        return List.of();
+    }
+
+    /** Seconds left, -1 for no expiry, -2 for no such key - Redis's own answer. */
+    default long ttl(String key) {
+        return -2;
+    }
+
     /** Throws with the real reason if the far end is not answering. */
     void ping();
 

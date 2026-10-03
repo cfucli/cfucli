@@ -72,7 +72,7 @@ That is put, exec and delete. The job appears in `jobs` exactly as an `exec` wou
 
 `put` and `get` pick their route by size and say which they took. Two ends on one machine share a filesystem, so nothing is transferred. A file under `largeFileThresholdBytes` (256K) goes through the relay as encrypted 64K chunks. Anything larger goes through a folder both machines already have mounted — `largeFileExchangeDir` in settings on both ends, which is what a synced Google Drive folder is for — and only the relative path crosses the wire, so the two machines may mount it at different absolute paths. Arrival is decided by SHA-256 rather than by the file appearing, because a sync product gives no signal when it has finished writing.
 
-With no such folder configured, a large file is refused with both ways out named rather than quietly spending a few hundred metered relay messages; `--via relay` overrides that. Nothing is overwritten without `--force`.
+With no such folder configured, a large file is refused with both ways out named rather than quietly spending a few hundred metered relay messages; `--via relay` overrides that, up to a hard 10M, above which the relay refuses whatever is asked because it is one small database every machine on the credential shares. Nothing is overwritten without `--force`.
 
 ## Credentials
 
