@@ -72,6 +72,10 @@ Build @('-Pmac', '-pl', 'bundle', 'package')                  # Intel Mac jar
 # the exe, cfucli-win-<sha8>.jar (the bytes it hashed), the Mac jars, version.txt, SHA256SUMS and
 # cfucli.update.json. -Djr.updateMergeFrom keeps the releases already in the site's update file.
 $jrArgs = @('-Djrexe', '-Djr.source=url', '-pl', 'bundle', 'verify')
+# X.Y.Z-label (0.5.0-beta.1) is a pre-release: its exe follows the beta channel of the update file, and the
+# stable channel, which every installed X.Y.Z follows, is kept as it was.
+$pre = $version -match '-'
+if ($pre) { $jrArgs = @('-Djrexe.channel=beta') + $jrArgs }
 if (Test-Path $update) { $jrArgs = @("-Djr.updateMergeFrom=$((Resolve-Path $update).Path)") + $jrArgs }
 Build $jrArgs                                                 # cfucli.exe and the release folder
 
@@ -88,8 +92,11 @@ $jrCommit = if ($jrRepo) { @(git -C $jrRepo rev-parse HEAD 2>$null) | Where-Obje
 Get-ChildItem $out | ForEach-Object { Write-Host ('  {0,-28} {1,7:N1} MB' -f $_.Name, ($_.Length / 1MB)) }
 if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; return }
 
-$notes = "Install or update with one line.`n`nmacOS:  curl -fsSL https://cfucli.github.io/install.sh | bash`nWindows (PowerShell):  irm https://cfucli.github.io/install.ps1 | iex" +
-         "`n`nOn Windows cfucli.exe is a single file, the command line and the window in one (run it with no arguments for the window): on first run it fetches its jar from this release, checked against the sha256 it carries, and ``cfucli -Xjr:update`` replaces it with the next release." +
+$exeUrl = "https://github.com/cfucli/cfucli/releases/download/$tag/cfucli.exe"
+$notes = "Install on Windows, in cmd or PowerShell (curl.exe ships with Windows 10 and 11; no installer script):`n`n    curl.exe -fLo cfucli.exe $exeUrl`n    .\cfucli.exe install" +
+         "`n`nOr download cfucli.exe, run it, and press F6. Update later with ``cfucli update``." +
+         "`n`ncfucli.exe is a single file, the command line and the window in one (run it with no arguments for the window): on first run it fetches its jar from this release, checked against the sha256 it carries." +
+         "`n`n" + $(if ($pre) { "This is a pre-release: installed copies of earlier releases are not offered it, and it updates along the beta channel." } else { "" }) +
          "`ncfucli.exe is jr (https://github.com/jarrunner/jr), built by jr-maven-plugin." +
          "`njr commit: $(if ($jrCommit) { $jrCommit } else { 'unknown' })"
 # Through a file: Windows PowerShell passes a multi-line string to a native program cut at the first
@@ -98,9 +105,10 @@ $notesFile = Join-Path $out '..\release-notes.md'
 [IO.File]::WriteAllText($notesFile, $notes + "`n")
 # Every file in the folder is an asset except the update file, which goes to the site instead.
 $assets = (Get-ChildItem $out -File | Where-Object Name -ne 'cfucli.update.json').FullName
-& $gh release create $tag $assets --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile --latest
+$latest = if ($pre) { @('--prerelease', '--latest=false') } else { @('--latest') }
+& $gh release create $tag $assets --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile @latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
-Write-Host "published $tag - installers now pick it up"
+Write-Host $(if ($pre) { "published $tag as a pre-release - releases/latest and the stable channel are unchanged" } else { "published $tag - installers now pick it up" })
 
 # The update file "cfucli -Xjr:update" reads, written by the plugin. Copied to the site only after the
 # release exists, so a url never points at an asset that is not there yet.
