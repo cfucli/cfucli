@@ -18,6 +18,12 @@
     </properties>
 
     <dependencies>
+        <!-- install and update through jr (jarrunner updateutils); a snapshot until jarrunner has Central release quota again -->
+        <dependency>
+            <groupId>io.github.jarrunner</groupId>
+            <artifactId>updateutils</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>io.github.cfucli</groupId>
             <artifactId>cfucli-node</artifactId>

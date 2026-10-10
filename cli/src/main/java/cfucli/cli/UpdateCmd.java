@@ -2,62 +2,48 @@ package cfucli.cli;
 
 import module java.base;
 import cfucli.relay.Platform;
+import jarrunner.updateutils.Jr;
+import jarrunner.updateutils.UpdateResult;
+import jarrunner.updateutils.Updater;
 import picocli.CommandLine.*;
 
-/** Runs the same one line a person installs with, because install and update are the same act:
- *  fetch the latest release, put it in its own versions folder, point the launchers at it.
- *  <p>
- *  Its own folder per version is what makes this safe to run from inside the tool being replaced.
- *  A running JVM holds its jar open, and on Windows an open file cannot be overwritten - so nothing
- *  is ever overwritten; the launchers are repointed and the old folder is left for the next run to
- *  sweep. Running nodes are stopped by the installer, so the next command starts on new code
- *  rather than a node still holding the old classes. */
-@Command(name = "update", description = "Install the latest cfucli release - the same one line used to install it.")
+/** Replaces this cfucli exe with the newest release, through jr (-Xjr:update): jr reads the update file named in the
+ *  config it carries, checks the download's sha256 and swaps the exe, even while it runs. What cfucli adds around it:
+ *  running nodes are stopped first, so the next command starts on the new code, and the new exe is run once so it
+ *  fetches its jar now rather than on first use. */
+@Command(name = "update", description = "Update cfucli to the newest release. The new version runs from the next command.")
 final class UpdateCmd implements Callable<Integer> {
 
     public static final String SITE = "https://cfucli.github.io";
+
+    @Option(names = "--check", description = "only say whether a newer release is out")
+    boolean checkOnly;
 
     @Option(names = {"-h", "--help"}, usageHelp = true, description = "usage for this verb")
     boolean help;
 
     @Override
     public Integer call() throws Exception {
-        var cmd = Platform.isWindows()
-                ? List.of("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-                          "irm " + SITE + "/install.ps1 | iex")
-                : List.of("bash", "-c", "curl -fsSL " + SITE + "/install.sh | bash");
-        var pb = new ProcessBuilder(cmd).inheritIO();
-        // Update the copy that is running, wherever it was installed: an installed jar sits at
-        // <home>/versions/<version>/cfucli.jar. Anything else - a jar built from source, or a
-        // launcher someone keeps in their own tools folder - is not the installer's to replace,
-        // so it gets a fresh install in the default place and is told so.
-        var home = exeHome();
-        if (home == null) home = installHome(Self.jar().toAbsolutePath());
-        if (home != null) {
-            pb.environment().put("CFUCLI_HOME", home.toString());
-            Out.line("Updating the install in " + home);
-        } else {
-            Out.line("This cfucli runs from " + Self.jar().toAbsolutePath() + ", which the installer did not put there -"
-                     + " installing the latest release into the default folder instead. This copy is left as it is.");
+        var exe = Jr.exe();
+        if (exe.isEmpty()) {
+            Out.err("cfucli: update replaces the cfucli exe, and this cfucli was not started from one.");
+            Out.err("Download the newest from " + SITE);
+            return Exits.USAGE;
         }
-        Out.line("Running: " + cmd.getLast());
-        return pb.start().waitFor();
-    }
+        var check = Updater.run(false, true);
+        Out.line(check.message());
+        if (check.status() != UpdateResult.Status.NEWER || checkOnly) return check.ok() ? Exits.OK : Exits.FAILED;
 
-    /** Since 0.4 the installer puts only cfucli.exe in <home>/bin, and its jar lives in jr's cache;
-     *  jr names the running exe in this property. */
-    static Path exeHome() {
-        var exe = System.getProperty("io.github.jarrunner.jr.exe");
-        if (exe == null || exe.isBlank()) return null;
-        var bin = Paths.get(exe).toAbsolutePath().getParent();
-        if (bin == null || !"bin".equals(String.valueOf(bin.getFileName()))) return null;
-        return bin.getParent();
-    }
+        for (var node : RunningNodes.stopAll()) Out.line("stopped node '" + node + "' so it restarts on the new version");
+        var r = Updater.update(); // jr shows its progress and its result on stderr
+        if (!r.updated()) return r.ok() ? Exits.OK : Exits.FAILED;
 
-    static Path installHome(Path jar) {
-        var versionDir = jar.getParent();
-        var versions = versionDir == null ? null : versionDir.getParent();
-        if (versions == null || !"versions".equals(String.valueOf(versions.getFileName()))) return null;
-        return versions.getParent();
+        Out.line("fetching the new cfucli jar (about 90 MB) so the next command starts at once");
+        var warm = new ProcessBuilder(exe.get().toString(), "-Xjr:yes", "-Xjr:aot=false", "-V")
+                .redirectInput(ProcessBuilder.Redirect.from(new File(Platform.isWindows() ? "NUL" : "/dev/null")))
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        if (warm.waitFor() != 0) Out.line("the new version will fetch its jar on its first run instead");
+        Out.line("updated to " + r.latest());
+        return Exits.OK;
     }
 }
