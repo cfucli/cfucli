@@ -9,7 +9,9 @@
 #
 # Since 0.4 a release is ONE jar per platform - the cli and the window shaded together by the
 # bundle module - built per platform because the window's JavaFX carries its natives per platform
-# (see the profiles in bundle/pom.xml): cfucli-win-<sha8>.jar, cfucli-mac.jar, cfucli-mac-aarch64.jar.
+# (see the profiles in bundle/pom.xml): cfucli-win-<sha8>.jar, and for the Macs cfucli-mac-aarch64-<sha8>.jar and
+# cfucli-mac-<sha8>.jar, each run by its macOS binary (cfucli-macos-arm64, cfucli-macos-x86_64; since 0.5). The
+# unhashed cfucli-mac.jar and cfucli-mac-aarch64.jar are still published for 0.4's install.sh.
 # With no arguments the jar opens the window; with any, it is the cli.
 #
 # The Windows launcher cfucli.exe is jr (github.com/jarrunner/jr), built in the maven build itself
@@ -76,14 +78,34 @@ $jrArgs = @('-Djrexe', '-Djr.source=url', '-pl', 'bundle', 'verify')
 # stable channel, which every installed X.Y.Z follows, is kept as it was.
 $pre = $version -match '-'
 if ($pre) { $jrArgs = @('-Djrexe.channel=beta') + $jrArgs }
-if (Test-Path $update) { $jrArgs = @("-Djr.updateMergeFrom=$((Resolve-Path $update).Path)") + $jrArgs }
-Build $jrArgs                                                 # cfucli.exe and the release folder
+# @(...) around the if: an if that yields one string gives a string, and string + array would join them into one argument
+$merge = @(if (Test-Path $update) { "-Djr.updateMergeFrom=$((Resolve-Path $update).Path)" })
+Build ($merge + $jrArgs)                                      # cfucli.exe and the release folder
+
+# Then one run per Mac architecture (0.5): each builds that architecture's jar and the macOS binary that
+# runs it (cfucli-macos-arm64, cfucli-macos-x86_64; bundle/pom.xml), and merges the update file of the
+# run before, so the last one lists Windows and both Macs under this version. Every run writes its own
+# release folder, so they are gathered into one.
+$all = Join-Path $PSScriptRoot 'bundle\target\jr\release-all'
+if (Test-Path $all) { Remove-Item -Recurse -Force $all }
+New-Item -ItemType Directory -Path $all | Out-Null
+Copy-Item (Join-Path $out '*') $all
+foreach ($p in @('mac-aarch64', 'mac')) {
+    Build (@("-P$p", "-Djr.updateMergeFrom=$(Join-Path $all 'cfucli.update.json')") + $jrArgs)
+    Copy-Item (Join-Path $out '*') $all -Force
+}
+$out = $all
+# SHA256SUMS over everything gathered (each run wrote one for its own files only); the update file is not an asset.
+$sums = Get-ChildItem $out -File | Where-Object { $_.Name -notin @('SHA256SUMS', 'cfucli.update.json') } | Sort-Object Name |
+    ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" }
+[IO.File]::WriteAllText((Join-Path $out 'SHA256SUMS'), (($sums -join "`n") + "`n"))
 
 $updateOut = Join-Path $out 'cfucli.update.json'
 # cfucli-win-<sha8>.jar: the Windows jar is named after its own sha256 (bundle/pom.xml), so an exe
 # from any other build of this version asks for a file that does not exist rather than a jar that
-# does not match it.
-foreach ($f in @('cfucli.exe', 'cfucli-win-*.jar', 'cfucli-mac.jar', 'cfucli-mac-aarch64.jar', 'version.txt', 'SHA256SUMS', 'cfucli.update.json')) {
+# does not match it. The Mac jars likewise, each beside the binary that carries its sha256.
+foreach ($f in @('cfucli.exe', 'cfucli-win-*.jar', 'cfucli-macos-arm64', 'cfucli-mac-aarch64-*.jar', 'cfucli-macos-x86_64', 'cfucli-mac-????????.jar',
+                 'cfucli-mac.jar', 'cfucli-mac-aarch64.jar', 'version.txt', 'SHA256SUMS', 'cfucli.update.json')) {
     if (-not (Test-Path (Join-Path $out $f))) { throw "the release folder has no $f - see the jr:exe output above" }
 }
 $jrRepo = $env:JR_REPO
@@ -95,6 +117,8 @@ if ($DryRun) { Write-Host "dry run - nothing published. Assets are in $out"; ret
 $exeUrl = "https://github.com/cfucli/cfucli/releases/download/$tag/cfucli.exe"
 $notes = "Install on Windows, in cmd or PowerShell (curl.exe ships with Windows 10 and 11; no installer script):`n`n    curl.exe -fLo cfucli.exe $exeUrl`n    .\cfucli.exe install" +
          "`n`nOr download cfucli.exe, run it, and press F6. Update later with ``cfucli update``." +
+         "`n`nInstall on a Mac, in Terminal (one line; uname -m picks Apple silicon or Intel):`n`n    curl -fLo /tmp/cfucli https://github.com/cfucli/cfucli/releases/download/$tag/cfucli-macos-`$(uname -m) && chmod +x /tmp/cfucli && /tmp/cfucli install" +
+         "`n`nThat puts cfucli.app in ~/Applications (Launchpad, the Dock) and the cfucli command in ~/.local/bin. It is signed ad hoc, not by an Apple developer: downloaded with curl it opens as is; downloaded with a browser, macOS asks once (System Settings, Privacy & Security, Open Anyway)." +
          "`n`ncfucli.exe is a single file, the command line and the window in one (run it with no arguments for the window): on first run it fetches its jar from this release, checked against the sha256 it carries." +
          "`n`n" + $(if ($pre) { "This is a pre-release: installed copies of earlier releases are not offered it, and it updates along the beta channel." } else { "" }) +
          "`ncfucli.exe is jr (https://github.com/jarrunner/jr), built by jr-maven-plugin." +

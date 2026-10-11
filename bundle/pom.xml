@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.cfucli</groupId>
         <artifactId>cfucli</artifactId>
-        <version>0.5.0-beta.1</version>
+        <version>0.5.0-beta.2</version>
     </parent>
 
     <artifactId>cfucli-bundle</artifactId>
@@ -17,6 +17,8 @@
         <main.class>cfucli.cli.CfuCli</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
         <bundle.jar>shade/cfucli.jar</bundle.jar>
+        <!-- the jar's name in a release (jarUrl), before -<sha8>.jar -->
+        <bundle.jarname>cfucli-win</bundle.jarname>
         <jrexe.skip>false</jrexe.skip>
     </properties>
 
@@ -82,11 +84,13 @@
             </dependencies>
         </profile>
         <profile>
-            <!-- mvn -Pmac package          Intel Mac -->
+            <!-- mvn -Pmac package          Intel Mac; with -Djrexe also the Intel macOS binary -->
             <id>mac</id>
             <properties>
                 <bundle.jar>shade/cfucli-mac.jar</bundle.jar>
-                <jrexe.skip>true</jrexe.skip>
+                <bundle.jarname>cfucli-mac</bundle.jarname>
+                <jr.platforms>macos</jr.platforms>
+                <jr.macosArchitecture>x86_64</jr.macosArchitecture>
             </properties>
             <dependencies>
                 <dependency>
@@ -113,11 +117,13 @@
             </dependencies>
         </profile>
         <profile>
-            <!-- mvn -Pmac-aarch64 package  Apple Silicon Mac -->
+            <!-- mvn -Pmac-aarch64 package  Apple Silicon Mac; with -Djrexe also the Apple silicon macOS binary -->
             <id>mac-aarch64</id>
             <properties>
                 <bundle.jar>shade/cfucli-mac-aarch64.jar</bundle.jar>
-                <jrexe.skip>true</jrexe.skip>
+                <bundle.jarname>cfucli-mac-aarch64</bundle.jarname>
+                <jr.platforms>macos</jr.platforms>
+                <jr.macosArchitecture>arm64</jr.macosArchitecture>
             </properties>
             <dependencies>
                 <dependency>
@@ -206,7 +212,7 @@
                         <name>cfucli</name>
                         <appId>io.github.cfucli:cfucli</appId>
                         <jar>${project.basedir}/${bundle.jar}</jar>
-                        <jarUrl>${jrexe.release}/cfucli-win-{sha8}.jar</jarUrl>
+                        <jarUrl>${jrexe.release}/${bundle.jarname}-{sha8}.jar</jarUrl>
                         <updateUrl>${jrexe.updates}/cfucli.json</updateUrl>
                         <updateChannel>${jrexe.channel}</updateChannel>
                         <fileDescription>cfucli</fileDescription>

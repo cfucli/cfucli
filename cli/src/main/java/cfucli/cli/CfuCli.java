@@ -12,7 +12,7 @@ import picocli.CommandLine.Option;
  *  the manual as it always did. --help prints the manual rather than a list of flags: a flag list
  *  tells you what may be typed and nothing about what the tool is, and the first thing anybody
  *  arriving here needs is the second. Each verb keeps its own precise --help. */
-@Command(name = "cfucli", version = "cfucli 0.4.3",
+@Command(name = "cfucli", versionProvider = CfuCli.Version.class,
         description = "One real shell, watched by a human, driven from here - on this machine or across the internet.",
         subcommands = {ConsoleCmd.class, HostCmd.class, JoinCmd.class, LocalCmd.class, StatusCmd.class, SessionsCmd.class,
                 ExecCmd.class, WaitCmd.class, CancelCmd.class, SendKeysCmd.class, ScreenCmd.class,
@@ -23,6 +23,17 @@ import picocli.CommandLine.Option;
                 AvailableCmd.class, OnlineCmd.class, RequestCmd.class, RequestsCmd.class, ApproveCmd.class, DeclineCmd.class,
                 UpdateCmd.class, InstallCmd.class, WindowCmd.class})
 public final class CfuCli implements Callable<Integer> {
+
+    /** --version from the pom (resources-filtered/cfucli/cli/version.txt), so it cannot fall behind a release: it said
+     *  0.4.3 in 0.5.0-beta.1. */
+    static final class Version implements CommandLine.IVersionProvider {
+        @Override
+        public String[] getVersion() throws IOException {
+            try (var in = CfuCli.class.getResourceAsStream("version.txt")) {
+                return new String[] {"cfucli " + (in == null ? "(version unknown)" : new String(in.readAllBytes(), StandardCharsets.UTF_8).strip())};
+            }
+        }
+    }
 
     @Option(names = {"-h", "--help"}, description = "print the manual")
     boolean help;
