@@ -3,14 +3,14 @@ package cfucli.cli;
 import module java.base;
 import cfucli.relay.Home;
 import cfucli.relay.Platform;
-import jarrunner.updateutils.Install;
-import jarrunner.updateutils.Jr;
-import jarrunner.updateutils.Places;
+import jarrunner.jr.apputils.Install;
+import jarrunner.jr.apputils.JrApp;
+import jarrunner.jr.apputils.Places;
 import picocli.CommandLine.*;
 
 /** Installs the cfucli that is running, wherever it was downloaded to: the one-file install. On Windows the exe goes
  *  to %LOCALAPPDATA%\Programs\cfucli, first on the user PATH, with Start Menu and Desktop shortcuts; on macOS jr
- *  writes ~/Applications/cfucli.app and links ~/.local/bin/cfucli to it (jarrunner updateutils, Install). Running it
+ *  writes ~/Applications/cfucli.app and links ~/.local/bin/cfucli to it (jarrunner jr-apputils, Install). Running it
  *  again repairs the install. The window's F6 runs this. Settings and node state stay in ~/cfucli, untouched.
  *  <p>
  *  It also takes away what installs before 0.5 left: %USERPROFILE%\cfucli\bin on the PATH and the exe in it, the old
@@ -46,7 +46,7 @@ final class InstallCmd implements Callable<Integer> {
             RunningNodes.stopAll();
             return Install.uninstall("cfucli", Out::line).ok() ? Exits.OK : Exits.FAILED;
         }
-        if (Jr.exe().isEmpty()) {
+        if (JrApp.exe().isEmpty()) {
             Out.err("cfucli: install copies the running cfucli exe, and this cfucli was not started from one.");
             Out.err("Download it from " + UpdateCmd.SITE + " and run it with: install");
             return Exits.USAGE;

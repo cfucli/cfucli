@@ -2,9 +2,9 @@ package cfucli.cli;
 
 import module java.base;
 import cfucli.relay.Platform;
-import jarrunner.updateutils.Jr;
-import jarrunner.updateutils.UpdateResult;
-import jarrunner.updateutils.Updater;
+import jarrunner.jr.apputils.JrApp;
+import jarrunner.jr.apputils.UpdateResult;
+import jarrunner.jr.apputils.Updater;
 import picocli.CommandLine.*;
 
 /** Replaces this cfucli exe with the newest release, through jr (-Xjr:update): jr reads the update file named in the
@@ -24,7 +24,7 @@ final class UpdateCmd implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        var exe = Jr.exe();
+        var exe = JrApp.exe();
         if (exe.isEmpty()) {
             Out.err("cfucli: update replaces the cfucli exe, and this cfucli was not started from one.");
             Out.err("Download the newest from " + SITE);

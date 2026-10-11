@@ -1,7 +1,7 @@
 package cfucli.app;
 
 import module java.base;
-import jarrunner.updateutils.Places;
+import jarrunner.jr.apputils.Places;
 
 /** Installing from the window, for a person who downloaded cfucli.exe and double-clicked it.
  *  <p>

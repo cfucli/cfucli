@@ -52,7 +52,7 @@
             <id>jetbrains-intellij-dependencies</id>
             <url>https://packages.jetbrains.team/maven/p/ij/intellij-dependencies</url>
         </repository>
-        <!-- jarrunner's snapshots (updateutils, and jr-maven-plugin below), so cfucli builds on any
+        <!-- jarrunner's snapshots (jr-apputils, and jr-maven-plugin below), so cfucli builds on any
              machine, a Mac included, not only on one whose ~/.m2 already has them -->
         <repository>
             <id>central-snapshots</id>

@@ -18,10 +18,10 @@
     </properties>
 
     <dependencies>
-        <!-- install and update through jr (jarrunner updateutils); a snapshot until jarrunner has Central release quota again -->
+        <!-- install and update through jr (jarrunner jr-apputils); a snapshot until jarrunner has Central release quota again -->
         <dependency>
             <groupId>io.github.jarrunner</groupId>
-            <artifactId>updateutils</artifactId>
+            <artifactId>jr-apputils</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
