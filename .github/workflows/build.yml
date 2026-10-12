@@ -9,6 +9,10 @@ on:
     branches: [main, master]
   pull_request:
   workflow_dispatch:
+    inputs:
+      fresh_exe_from:
+        description: a release tag whose cfucli.exe the fresh-profile install uses (empty for the one just built)
+        default: ''
 
 jobs:
   windows:
@@ -29,6 +33,25 @@ jobs:
         run: |
           test -s bundle/target/jr/cfucli.exe
           ls -l bundle/target/jr/cfucli.exe
+      - name: install on a fresh profile
+        # A profile nothing has installed into has no %LOCALAPPDATA%\Programs. jr-apputils 1.0 then failed with
+        # SHGetKnownFolderPath(...) failed: 0x80070002, and cfucli 0.5.0 carried a workaround; 1.1 creates the
+        # folder itself. The runner is throwaway, so this is a real install: default folder, PATH, shortcuts.
+        # fresh_exe_from (workflow_dispatch) runs the same check on an older release's cfucli.exe instead.
+        shell: cmd
+        env:
+          FROM: ${{ inputs.fresh_exe_from }}
+        run: |
+          set "EXE=%GITHUB_WORKSPACE%\bundle\target\jr\cfucli.exe"
+          if not "%FROM%"=="" (
+            curl.exe -fsSLo "%RUNNER_TEMP%\cfucli.exe" https://github.com/cfucli/cfucli/releases/download/%FROM%/cfucli.exe || exit /b 1
+            set "EXE=%RUNNER_TEMP%\cfucli.exe"
+          )
+          if exist "%LOCALAPPDATA%\Programs" rmdir /s /q "%LOCALAPPDATA%\Programs"
+          if exist "%LOCALAPPDATA%\Programs" (echo could not remove %LOCALAPPDATA%\Programs & exit /b 1)
+          call "%EXE%" -V || exit /b 1
+          call "%EXE%" -Xjr:yes install < nul || exit /b 1
+          "%LOCALAPPDATA%\Programs\cfucli\cfucli.exe" -V || exit /b 1
 
   macos:
     runs-on: macos-latest
