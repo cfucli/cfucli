@@ -1,0 +1,74 @@
+# Run by hand: does a Mac that has cfucli 0.4.x reach the new release, and does that copy then
+# update itself? A throwaway macOS runner stands in for a real Mac, so it proves behaviour, not
+# looks (the Dock, Finder and double-click still need a person at a Mac).
+#
+#   old:    install 0.4.3 the way 0.4 did (the site's install.sh as of 0.4.3, the 0.4.3 release)
+#   update: how that copy updates. "script" runs the site's install.sh from script_ref against
+#           new_release, which is what 0.4.3's `cfucli update` does, before the site serves it.
+#           "real" runs the installed 0.4.3's own `cfucli update`, against the live site.
+#   then:   the new copy must be the jr binary, run from ~/.local/bin, with 0.4's layout gone, and
+#           its own `cfucli update --check` must work.
+name: mac-update-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_release:
+        description: release folder the new install.sh reads (script mode)
+        default: https://github.com/cfucli/cfucli/releases/latest/download
+      script_ref:
+        description: cfucli.github.io ref whose install.sh to run (script mode)
+        default: main
+      mode:
+        description: script or real
+        default: script
+      beta_from:
+        description: also install this release's binary and run its `cfucli update` (empty to skip)
+        default: ''
+
+jobs:
+  from-0-4:
+    runs-on: macos-latest
+    steps:
+      - name: install 0.4.3 the 0.4 way
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/cfucli/cfucli.github.io/b80415d/install.sh \
+            | CFUCLI_RELEASE=https://github.com/cfucli/cfucli/releases/download/v0.4.3 bash
+          ~/cfucli/bin/cfucli -V
+          ls ~/cfucli ~/cfucli/versions
+      - name: update (script)
+        if: inputs.mode == 'script'
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/cfucli/cfucli.github.io/${{ inputs.script_ref }}/install.sh" \
+            | CFUCLI_HOME="$HOME/cfucli" CFUCLI_RELEASE="${{ inputs.new_release }}" bash
+      - name: update (real - 0.4.3's own cfucli update)
+        if: inputs.mode == 'real'
+        run: ~/cfucli/bin/cfucli update < /dev/null
+      - name: check the result
+        run: |
+          set -x
+          ls -la ~/.local/bin ~/Applications ~/cfucli || true
+          test -L ~/.local/bin/cfucli
+          file -L ~/.local/bin/cfucli | grep -q Mach-O
+          file ~/Applications/cfucli.app/Contents/MacOS/cfucli | grep -q Mach-O
+          test ! -e ~/cfucli/versions
+          test ! -e ~/cfucli/runtime
+          test ! -e ~/cfucli/bin/cfucli
+          grep -n "local/bin\|cfucli" ~/.zprofile || true
+          ~/.local/bin/cfucli -V
+          ~/.local/bin/cfucli update --check
+
+  from-beta:
+    if: inputs.beta_from != ''
+    runs-on: macos-latest
+    steps:
+      - name: install ${{ inputs.beta_from }} with the one-line install
+        run: |
+          curl -fLo /tmp/cfucli "https://github.com/cfucli/cfucli/releases/download/${{ inputs.beta_from }}/cfucli-macos-$(uname -m)"
+          chmod +x /tmp/cfucli && /tmp/cfucli -Xjr:yes install < /dev/null
+          ~/.local/bin/cfucli -V
+      - name: its own cfucli update
+        run: |
+          ~/.local/bin/cfucli update < /dev/null
+          ~/.local/bin/cfucli -V
+          ~/.local/bin/cfucli update --check
