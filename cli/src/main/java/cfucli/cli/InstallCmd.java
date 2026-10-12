@@ -71,7 +71,8 @@ final class InstallCmd implements Callable<Integer> {
 
     /** %LOCALAPPDATA%\Programs, where Install puts the exe, does not exist on a profile nothing has installed into
      *  yet, and jr-apputils 1.0 asks Windows for it without the create flag, which then fails (0x80070002). Measured
-     *  on a fresh GitHub Windows runner, 2026-10-12. Made here first; harmless where it exists. */
+     *  on a fresh GitHub Windows runner, 2026-10-12. Made here first; harmless where it exists. jr-apputils 1.1
+     *  passes KF_FLAG_CREATE itself: drop this when cfucli moves to 1.1 (not yet on Central at 0.5.0). */
     private static void ensureUserPrograms() {
         try {
             var local = System.getenv("LOCALAPPDATA");

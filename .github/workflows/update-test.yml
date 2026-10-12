@@ -130,7 +130,10 @@ jobs:
     steps:
       - name: install ${{ inputs.beta_from }} the one-line way
         shell: cmd
+        # A beta before 0.5.0-beta.3 could not install on a profile without %LOCALAPPDATA%\Programs (jr-apputils
+        # 1.0); a machine that has such a beta installed has the folder, so the test gives it one.
         run: |
+          if not exist "%LOCALAPPDATA%\Programs" mkdir "%LOCALAPPDATA%\Programs"
           curl.exe -fLo "%RUNNER_TEMP%\cfucli.exe" https://github.com/cfucli/cfucli/releases/download/${{ inputs.beta_from }}/cfucli.exe
           "%RUNNER_TEMP%\cfucli.exe" -Xjr:yes install < nul
           "%LOCALAPPDATA%\Programs\cfucli\cfucli.exe" -V
