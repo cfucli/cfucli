@@ -1,0 +1,55 @@
+# Proves cfucli builds from public repositories alone: a clean runner has nothing in ~/.m2, so any
+# dependency or plugin that exists only on a developer's machine fails here. Builds the jars and
+# the jr launchers (cfucli.exe on Windows, the macOS binaries on the Mac), publishes nothing and
+# needs no secrets. Releases are still made by release.ps1.
+name: build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: build every module
+        run: mvn -B -ntp -DskipTests install
+      - name: build cfucli.exe (jr-maven-plugin)
+        run: mvn -B -ntp -DskipTests -Djrexe -pl bundle verify
+      - name: check cfucli.exe
+        shell: bash
+        run: |
+          test -s bundle/target/jr/cfucli.exe
+          ls -l bundle/target/jr/cfucli.exe
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: build every module
+        run: mvn -B -ntp -DskipTests install
+      - name: build the Mac jars and binaries (jr-maven-plugin)
+        run: |
+          mvn -B -ntp -DskipTests -Pmac-aarch64 -Djrexe -Djr.source=url -pl bundle verify
+          mkdir -p out && cp bundle/target/jr/release/cfucli-macos-arm64 out/
+          mvn -B -ntp -DskipTests -Pmac -Djrexe -Djr.source=url -pl bundle verify
+          cp bundle/target/jr/release/cfucli-macos-x86_64 out/
+      - name: check the binaries
+        run: |
+          ls -l out
+          file out/*
+          test -s out/cfucli-macos-arm64
+          test -s out/cfucli-macos-x86_64
