@@ -2,6 +2,7 @@
 #
 #     .\release.ps1                  build, checksum, and publish the version in pom.xml
 #     .\release.ps1 -DryRun          build and checksum only; show what would be published
+#     .\release.ps1 -Changes f.md    put f.md (what changed in this release) at the top of the release notes
 #
 # The installers download from releases/latest/download/<name>, so the asset NAMES below must
 # never change between releases - only their contents. Every machine picks the new version up by
@@ -29,7 +30,7 @@
 # $env:GH names the GitHub CLI to use (default: gh), for machines that pick an identity through a
 # wrapper. Requires a clean, pushed working tree: a release must match a public commit.
 
-param([switch]$DryRun)
+param([switch]$DryRun, [string]$Changes)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -125,6 +126,7 @@ $notes = "Install on Windows, in cmd or PowerShell (curl.exe ships with Windows 
          "`njr commit: $(if ($jrCommit) { $jrCommit } else { 'unknown' })"
 # Through a file: Windows PowerShell passes a multi-line string to a native program cut at the first
 # line break - measured, v0.3's notes arrived as their first line only, losing the jr provenance.
+if ($Changes) { $notes = [IO.File]::ReadAllText((Resolve-Path $Changes).Path).Trim() + "`n`n" + $notes }
 $notesFile = Join-Path $out '..\release-notes.md'
 [IO.File]::WriteAllText($notesFile, $notes + "`n")
 # Every file in the folder is an asset except the update file, which goes to the site instead.
