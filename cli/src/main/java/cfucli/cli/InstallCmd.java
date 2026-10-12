@@ -53,11 +53,13 @@ final class InstallCmd implements Callable<Integer> {
         }
         for (var node : RunningNodes.stopAll()) Out.line("stopped node '" + node + "' so it restarts on this version");
         if (Places.os() == Places.Os.MACOS) removeOldMacApp();
+        if (Platform.isWindows()) ensureUserPrograms();
         var r = Install.app("cfucli").displayName("cfucli").description("cfucli - share a shell, or join one")
                 .desktopShortcut(true).workingDir(Home.dir()).log(Out::line).run();
+        // The old layout goes only once the new one is in place: a failed install must leave the old one working.
+        if (!r.ok()) return Exits.FAILED;
         if (Platform.isWindows()) removeOldWindowsLayout();
         removeOldFolders();
-        if (!r.ok()) return Exits.FAILED;
         Out.line("");
         Out.line("  cfucli is installed: " + r.command());
         Out.line("  First time on this machine? Two things, once:");
@@ -65,6 +67,18 @@ final class InstallCmd implements Callable<Integer> {
         Out.line("    cfucli available on --as <your name>");
         Out.line("  To update later:  cfucli update");
         return Exits.OK;
+    }
+
+    /** %LOCALAPPDATA%\Programs, where Install puts the exe, does not exist on a profile nothing has installed into
+     *  yet, and jr-apputils 1.0 asks Windows for it without the create flag, which then fails (0x80070002). Measured
+     *  on a fresh GitHub Windows runner, 2026-10-12. Made here first; harmless where it exists. */
+    private static void ensureUserPrograms() {
+        try {
+            var local = System.getenv("LOCALAPPDATA");
+            var base = local != null && !local.isBlank() ? Path.of(local) : Places.dataDir("cfucli").getParent();
+            Files.createDirectories(base.resolve("Programs"));
+        } catch (Exception ignored) { // Install reports it if the folder is still missing
+        }
     }
 
     /** 0.4 and earlier on Windows: %USERPROFILE%\cfucli\bin, first on the user PATH, and a Start Menu folder. */

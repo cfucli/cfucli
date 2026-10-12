@@ -4,6 +4,23 @@ RustDesk for the terminal. One real shell that two people on different machines 
 
 When both ends are on the same machine it skips the relay entirely and talks over a loopback socket instead, which makes it usable as an everyday local console: a shell in a window a person can watch, driven from the command line, with the whole session recorded and queryable.
 
+## Install
+
+Windows, in a Command Prompt or PowerShell (curl.exe ships with Windows 10 and 11):
+
+```
+curl.exe -fLo cfucli.exe https://github.com/cfucli/cfucli/releases/latest/download/cfucli.exe
+.\cfucli.exe install
+```
+
+macOS, in Terminal (`uname -m` picks Apple silicon or Intel):
+
+```
+curl -fLo /tmp/cfucli https://github.com/cfucli/cfucli/releases/latest/download/cfucli-macos-$(uname -m) && chmod +x /tmp/cfucli && /tmp/cfucli install
+```
+
+No administrator rights, and nothing to install first: on first run it fetches its jar from the release, checked against the sha256 it carries, and a Java runtime if there is none. On Windows it goes to `%LOCALAPPDATA%\Programs\cfucli`, on the PATH, with Start Menu and Desktop shortcuts; on a Mac `cfucli.app` goes to `~/Applications` and the `cfucli` command to `~/.local/bin`. Update with `cfucli update`, remove with `cfucli install --uninstall`; settings in `~/cfucli` are kept. An install of 0.4 moves itself to this layout on its next `cfucli update`.
+
 ## The pieces
 
 Six maven modules under an aggregator. `relay` is the transport, framing, end-to-end crypto and session model — no UI, no PTY. `record` is the local ArcadeDB store and its query surface. `node` is the resident half: the PTY, the host and viewer sessions, and a loopback JSON protocol. `app` is the JavaFX window — host, viewer and tray manager in one exe. `cli` is picocli over the loopback protocol. `bundle` has no code: it shades the cli and the window into the one jar that ships.
@@ -18,7 +35,7 @@ mvn install
 
 JDK 25. pty4j comes from the JetBrains maven repository, declared in the root pom.
 
-The Windows launcher `cfucli.exe` is a [jr](https://github.com/jarrunner/jr) exe with its config baked in, built by jr-maven-plugin in the opt-in `jrexe` profile (the plugin is not on Maven Central yet):
+The launchers, `cfucli.exe` on Windows and `cfucli-macos-arm64` / `cfucli-macos-x86_64` on a Mac, are [jr](https://github.com/jarrunner/jr) with their config baked in, built by jr-maven-plugin (from Maven Central) in the opt-in `jrexe` profile. Everything builds from Maven Central and the JetBrains repository alone; `.github/workflows/build.yml` proves it on every push. A release is `release.ps1`.
 
 ```
  mvn -Djrexe verify                       an exe that runs the jar just built, in bundle/target/jr
@@ -30,11 +47,11 @@ A release exe is a single file: on first run it downloads its jar, checks it aga
 
 ## Use it
 
-On Windows the launcher is `cfucli.exe`, from the installer or built as above, so the examples below are what you actually type. Without it, `java -jar bundle/shade/cfucli.jar ...` is the same thing.
+Installed as above, the command is `cfucli`, so the examples below are what you actually type. Without it, `java -jar bundle/shade/cfucli.jar ...` is the same thing.
 
 The window, for a person: `cfucli` with nothing after it (the desktop shortcut does exactly that), or `cfucli window` with `--host`, `--join <id> -p <password>` or `--tray` to go straight into a role.
 
-Installing without the one-line installer: download `cfucli.exe` from the latest release and double-click it. The window says it is not installed, and F6 (or `cfucli install` in a terminal) puts it in `%USERPROFILE%\cfucli\bin`, adds that to the PATH and creates the shortcuts, exactly as the one-line install does. Windows may warn about an unsigned download first ("More info", then "Run anyway").
+Installing from a browser download instead: download `cfucli.exe` from the latest release and double-click it. The window says it is not installed, and F6 does what `cfucli install` does. Windows may warn about an unsigned download first ("More info", then "Run anyway").
 
 A shell on this machine, in a window, driven from the cli:
 
