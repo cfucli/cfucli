@@ -1,0 +1,142 @@
+# Run by hand: does a machine that has cfucli 0.4.x reach the new release, and does that copy then
+# update itself? Throwaway runners stand in for real machines, so this proves behaviour, not looks
+# (the Dock, Finder, shortcuts and double-click still need a person at the machine).
+#
+#   old:    install 0.4.3 the way 0.4 did (the site's install script as of 0.4.3, the 0.4.3 release)
+#   update: how that copy updates.
+#             script   the site's install script from script_ref, against new_release: what 0.4.3's
+#                      `cfucli update` runs, tried before the site serves it
+#             real     the installed 0.4.3's own `cfucli update`, against the live site
+#             jr       (Windows) the 0.4.3 exe's own -Xjr:update, against the live update file
+#   then:   the new copy must be the jr launcher in its 0.5 place (for jr mode, in 0.4's place), and
+#           its own `cfucli update --check` must work.
+#   beta_from: also install that release's binary the one-line way and run its `cfucli update`.
+name: update-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_release:
+        description: release folder the install script reads (script mode)
+        default: https://github.com/cfucli/cfucli/releases/latest/download
+      script_ref:
+        description: cfucli.github.io ref whose install script to run (script mode)
+        default: main
+      mode:
+        description: script, real or jr
+        default: script
+      beta_from:
+        description: a release tag to install and update from (empty to skip)
+        default: ''
+
+env:
+  OLD_SITE: https://raw.githubusercontent.com/cfucli/cfucli.github.io/b80415d
+  OLD_RELEASE: https://github.com/cfucli/cfucli/releases/download/v0.4.3
+
+jobs:
+  mac-from-0-4:
+    if: inputs.mode != 'jr'
+    runs-on: macos-latest
+    steps:
+      - name: install 0.4.3 the 0.4 way
+        run: |
+          curl -fsSL "$OLD_SITE/install.sh" | CFUCLI_RELEASE="$OLD_RELEASE" bash
+          ~/cfucli/bin/cfucli -V
+          ls ~/cfucli ~/cfucli/versions
+      - name: update (script)
+        if: inputs.mode == 'script'
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/cfucli/cfucli.github.io/${{ inputs.script_ref }}/install.sh" \
+            | CFUCLI_HOME="$HOME/cfucli" CFUCLI_RELEASE="${{ inputs.new_release }}" bash
+      - name: update (real - 0.4.3's own cfucli update)
+        if: inputs.mode == 'real'
+        run: ~/cfucli/bin/cfucli update < /dev/null
+      - name: check the result
+        run: |
+          set -x
+          ls -la ~/.local/bin ~/Applications ~/cfucli || true
+          test -L ~/.local/bin/cfucli
+          file -L ~/.local/bin/cfucli | grep -q Mach-O
+          file ~/Applications/cfucli.app/Contents/MacOS/cfucli | grep -q Mach-O
+          test ! -e ~/cfucli/versions
+          test ! -e ~/cfucli/runtime
+          test ! -e ~/cfucli/bin/cfucli
+          grep -n "local/bin\|cfucli" ~/.zprofile || true
+          ~/.local/bin/cfucli -V
+          ~/.local/bin/cfucli update --check
+
+  windows-from-0-4:
+    runs-on: windows-latest
+    steps:
+      - name: install 0.4.3 the 0.4 way
+        shell: powershell
+        run: |
+          $env:CFUCLI_RELEASE = $env:OLD_RELEASE
+          irm "$env:OLD_SITE/install.ps1" | iex
+          & "$env:USERPROFILE\cfucli\bin\cfucli.exe" -V
+      - name: update (script)
+        if: inputs.mode == 'script'
+        shell: powershell
+        run: |
+          $env:CFUCLI_HOME = "$env:USERPROFILE\cfucli"
+          $env:CFUCLI_RELEASE = '${{ inputs.new_release }}'
+          irm 'https://raw.githubusercontent.com/cfucli/cfucli.github.io/${{ inputs.script_ref }}/install.ps1' | iex
+      - name: update (real - 0.4.3's own cfucli update)
+        if: inputs.mode == 'real'
+        shell: cmd
+        run: '"%USERPROFILE%\cfucli\bin\cfucli.exe" update < nul'
+      - name: update (jr - 0.4.3's own -Xjr:update)
+        if: inputs.mode == 'jr'
+        shell: cmd
+        run: |
+          "%USERPROFILE%\cfucli\bin\cfucli.exe" -Xjr:update-check -Xjr:batch
+          "%USERPROFILE%\cfucli\bin\cfucli.exe" -Xjr:update -Xjr:batch
+      - name: check the result
+        shell: powershell
+        run: |
+          $old = "$env:USERPROFILE\cfucli\bin"
+          $new = "$env:LOCALAPPDATA\Programs\cfucli"
+          Get-ChildItem $old, $new -ErrorAction SilentlyContinue | Format-Table FullName, Length
+          if ('${{ inputs.mode }}' -eq 'jr') { $exe = "$old\cfucli.exe" } else {
+            $exe = "$new\cfucli.exe"
+            if (-not (Test-Path $exe)) { throw "no $exe" }
+            if (Test-Path "$old\cfucli.exe") { throw "0.4's $old\cfucli.exe is still there" }
+            $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+            Write-Host "user PATH: $userPath"
+            if ($userPath -like "*$old*") { throw "0.4's $old is still on the user PATH" }
+          }
+          cmd /c "`"$exe`" -V"
+          cmd /c "`"$exe`" update --check"
+          if ($LASTEXITCODE -ne 0) { throw "update --check exit $LASTEXITCODE" }
+
+  mac-from-beta:
+    if: inputs.beta_from != ''
+    runs-on: macos-latest
+    steps:
+      - name: install ${{ inputs.beta_from }} the one-line way
+        run: |
+          curl -fLo /tmp/cfucli "https://github.com/cfucli/cfucli/releases/download/${{ inputs.beta_from }}/cfucli-macos-$(uname -m)"
+          chmod +x /tmp/cfucli && /tmp/cfucli -Xjr:yes install < /dev/null
+          ~/.local/bin/cfucli -V
+      - name: its own cfucli update
+        run: |
+          ~/.local/bin/cfucli update < /dev/null
+          ~/.local/bin/cfucli -V
+          ~/.local/bin/cfucli update --check
+
+  windows-from-beta:
+    if: inputs.beta_from != ''
+    runs-on: windows-latest
+    steps:
+      - name: install ${{ inputs.beta_from }} the one-line way
+        shell: cmd
+        run: |
+          curl.exe -fLo "%RUNNER_TEMP%\cfucli.exe" https://github.com/cfucli/cfucli/releases/download/${{ inputs.beta_from }}/cfucli.exe
+          "%RUNNER_TEMP%\cfucli.exe" -Xjr:yes install < nul
+          "%LOCALAPPDATA%\Programs\cfucli\cfucli.exe" -V
+      - name: its own cfucli update
+        shell: cmd
+        run: |
+          "%LOCALAPPDATA%\Programs\cfucli\cfucli.exe" update < nul
+          "%LOCALAPPDATA%\Programs\cfucli\cfucli.exe" -V
+          "%LOCALAPPDATA%\Programs\cfucli\cfucli.exe" update --check
