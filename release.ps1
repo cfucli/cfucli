@@ -133,6 +133,12 @@ $notesFile = Join-Path $out '..\release-notes.md'
 $assets = (Get-ChildItem $out -File | Where-Object Name -ne 'cfucli.update.json').FullName
 # --latest=true, not a bare --latest: through a gh wrapper .bat the bare flag failed with "no matches found for `-`"
 # and nothing was published (0.5.0, 2026-10-12); the =value form is what the pre-release path always used.
+# KNOWN, cause not found: with $env:GH = 'ghiv.bat' this line still failed the same way at 0.5.1 (2026-10-12),
+# --latest=true or not; nothing was published either time. Both releases were then created by hand from this
+# folder with the same arguments, which worked (the update file below must then be copied to the site by hand):
+#   $assets = (Get-ChildItem bundle\target\jr\release-all -File | Where-Object Name -ne 'cfucli.update.json').FullName
+#   $sha = (gitiv rev-parse HEAD | Where-Object { $_ -match '^[0-9a-f]{40}$' })
+#   ghiv release create v<version> $assets --repo cfucli/cfucli --target $sha --title "cfucli <version>" --notes-file bundle\target\jr\release-notes.md --latest=true
 $latest = if ($pre) { @('--prerelease', '--latest=false') } else { @('--latest=true') }
 & $gh release create $tag $assets --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile @latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
