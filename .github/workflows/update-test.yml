@@ -87,10 +87,14 @@ jobs:
         run: '"%USERPROFILE%\cfucli\bin\cfucli.exe" update < nul'
       - name: update (jr - 0.4.3's own -Xjr:update)
         if: inputs.mode == 'jr'
+        # 0.4.3's jr has -Xjr:update but not -Xjr:batch (an unknown option there is an error).
+        # update-check exits 10 when a newer release exists, which is what this step wants to see.
         shell: cmd
+        timeout-minutes: 5
         run: |
-          "%USERPROFILE%\cfucli\bin\cfucli.exe" -Xjr:update-check -Xjr:batch
-          "%USERPROFILE%\cfucli\bin\cfucli.exe" -Xjr:update -Xjr:batch
+          "%USERPROFILE%\cfucli\bin\cfucli.exe" -Xjr:update-check < nul
+          if errorlevel 11 exit /b 1
+          "%USERPROFILE%\cfucli\bin\cfucli.exe" -Xjr:update < nul
       - name: check the result
         shell: powershell
         run: |
