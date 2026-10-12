@@ -129,7 +129,9 @@ $notesFile = Join-Path $out '..\release-notes.md'
 [IO.File]::WriteAllText($notesFile, $notes + "`n")
 # Every file in the folder is an asset except the update file, which goes to the site instead.
 $assets = (Get-ChildItem $out -File | Where-Object Name -ne 'cfucli.update.json').FullName
-$latest = if ($pre) { @('--prerelease', '--latest=false') } else { @('--latest') }
+# --latest=true, not a bare --latest: through a gh wrapper .bat the bare flag failed with "no matches found for `-`"
+# and nothing was published (0.5.0, 2026-10-12); the =value form is what the pre-release path always used.
+$latest = if ($pre) { @('--prerelease', '--latest=false') } else { @('--latest=true') }
 & $gh release create $tag $assets --repo cfucli/cfucli --target (Sha HEAD) --title "cfucli $version" --notes-file $notesFile @latest
 if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
 Write-Host $(if ($pre) { "published $tag as a pre-release - releases/latest and the stable channel are unchanged" } else { "published $tag - installers now pick it up" })
