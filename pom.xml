@@ -52,23 +52,7 @@
             <id>jetbrains-intellij-dependencies</id>
             <url>https://packages.jetbrains.team/maven/p/ij/intellij-dependencies</url>
         </repository>
-        <!-- jarrunner's snapshots (jr-apputils, and jr-maven-plugin below), so cfucli builds on any
-             machine, a Mac included, not only on one whose ~/.m2 already has them -->
-        <repository>
-            <id>central-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-            <releases><enabled>false</enabled></releases>
-            <snapshots><enabled>true</enabled></snapshots>
-        </repository>
     </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>central-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-            <releases><enabled>false</enabled></releases>
-            <snapshots><enabled>true</enabled></snapshots>
-        </pluginRepository>
-    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -225,7 +209,7 @@
                     <plugin>
                         <groupId>io.github.jarrunner</groupId>
                         <artifactId>jr-maven-plugin</artifactId>
-                        <version>1.2.0-SNAPSHOT</version>
+                        <version>1.2.0</version>
                         <executions>
                             <execution>
                                 <!-- verify, not package: an inherited plugin runs before the module's own
